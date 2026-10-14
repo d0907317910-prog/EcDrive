@@ -3,382 +3,592 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#102019">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1512">
+<meta name="description" content="Ec電驅 ESP32-S3 BLE 四路繼電器控制">
 <title>Ec電驅｜四路控制</title>
+
 <style>
-*{box-sizing:border-box}
-body{margin:0;padding:20px;background:#101a15;color:#f1fff5;
-font-family:Arial,"Noto Sans TC",sans-serif}
-main{max-width:650px;margin:auto}
-h1{color:#91f2b5;margin-bottom:5px}
-p{color:#a8c0b0}
-.card{background:#1b2b22;border:1px solid #35513e;
-border-radius:16px;padding:16px;margin:14px 0}
-button,input{font:inherit}
-button{padding:12px;border:0;border-radius:10px;
-background:#91f2b5;color:#102019;font-weight:bold;cursor:pointer}
-button:disabled{opacity:.5}
-input{width:100%;padding:11px;border-radius:9px;
-border:1px solid #45634d;background:#101a15;color:white}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.relay{background:#263b2d;padding:14px;border-radius:12px}
-.relay button{width:100%;margin-top:12px}
-.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.off{background:#513131;color:#fff}
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.tabs button{font-size:13px;padding:10px 4px;background:#263b2d;color:white}
-.tabs button.active{background:#91f2b5;color:#102019}
-.page{display:none}.page.active{display:block}
-.field{margin:12px 0}
-.field label{display:block;font-size:13px;color:#b9cbbb;margin-bottom:6px}
-.log{font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;
-max-height:220px;overflow:auto;background:#0b120e;padding:10px;border-radius:8px}
-small{color:#b9cbbb}
+:root {
+  --bg:#0b1512;
+  --panel:#172820;
+  --line:#35513e;
+  --green:#91f2b5;
+  --text:#f1fff5;
+  --muted:#a8c0b0;
+  --red:#633333;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  padding:18px;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Arial,"Noto Sans TC",sans-serif;
+}
+main { max-width:760px; margin:auto; }
+h1 { margin-bottom:5px; color:var(--green); }
+h2 { font-size:18px; }
+p { color:var(--muted); line-height:1.6; }
+button,input {
+  font:inherit;
+}
+button {
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--green);
+  color:#102019;
+  font-weight:bold;
+  cursor:pointer;
+}
+button:disabled { opacity:.5; }
+input {
+  width:100%;
+  padding:11px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:#101a15;
+  color:white;
+}
+.card {
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:15px;
+  padding:15px;
+  margin:14px 0;
+}
+.row {
+  display:flex;
+  gap:9px;
+  flex-wrap:wrap;
+}
+.row button { flex:1; }
+.danger { background:var(--red); color:white; }
+.tabs {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:6px;
+  margin:15px 0;
+}
+.tabs button {
+  background:#263b2d;
+  color:white;
+  font-size:13px;
+  padding:11px 5px;
+}
+.tabs button.active {
+  background:var(--green);
+  color:#102019;
+}
+.page { display:none; }
+.page.active { display:block; }
+.grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.relay {
+  background:#20352a;
+  border:1px solid var(--line);
+  border-radius:13px;
+  padding:13px;
+  overflow-wrap:anywhere;
+}
+.relay button { width:100%; margin-top:12px; }
+.relay p { margin-bottom:0; }
+.field { margin:12px 0; }
+.field label {
+  display:block;
+  color:var(--muted);
+  font-size:13px;
+  margin-bottom:6px;
+}
+.check { display:block; margin:10px 0; }
+.check input { width:auto; }
+.log {
+  background:#07100b;
+  border-radius:8px;
+  padding:10px;
+  max-height:230px;
+  overflow:auto;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  font-size:12px;
+}
+small { color:var(--muted); }
+@media(min-width:650px) {
+  .grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+}
 </style>
 </head>
+
 <body>
 <main>
-<h1>Ec電驅</h1>
-<p>ESP32-S3 BLE 四路繼電器控制</p>
+  <h1>Ec電驅</h1>
+  <p>ESP32-S3 BLE 四路繼電器控制</p>
 
-<div class="card">
-  <div id="status">尚未連線</div>
-  <p id="deviceInfo">請連接 ESP32-S3</p>
-  <button id="connect">搜尋藍牙裝置</button>
-</div>
-
-<div class="tabs">
-  <button class="active" data-tab="power">電源控制</button>
-  <button data-tab="groups">控制組合</button>
-  <button data-tab="settings">設定／診斷</button>
-</div>
-
-<section id="power" class="page active">
-  <div class="card actions">
-    <button id="allOn">一鍵全開</button>
-    <button id="allOff" class="off">一鍵全關</button>
-  </div>
-  <div class="grid" id="relays"></div>
-  <p><small>畫面顯示的是已送出的控制狀態，不代表已讀回實際接點狀態。</small></p>
-</section>
-
-<section id="groups" class="page">
   <div class="card">
-    <h3>新增控制組合</h3>
-    <div class="field">
-      <label>組合名稱</label>
-      <input id="groupName" placeholder="例如：夜間燈光">
+    <strong id="status">尚未連線</strong>
+    <p id="deviceInfo">請連接 ESP32-S3</p>
+    <button id="connect">搜尋藍牙裝置</button>
+  </div>
+
+  <nav class="tabs">
+    <button class="active" data-tab="power">電源控制</button>
+    <button data-tab="groups">控制組合</button>
+    <button data-tab="settings">設定／診斷</button>
+  </nav>
+
+  <section id="power" class="page active">
+    <div class="card row">
+      <button id="allOn">一鍵全開</button>
+      <button id="allOff" class="danger">一鍵全關</button>
     </div>
-    <div id="groupChecks"></div>
-    <button id="saveGroup" style="width:100%;margin-top:12px">儲存組合</button>
-  </div>
-  <div class="card">
-    <h3>已儲存的組合</h3>
-    <div id="groupList">尚未建立組合</div>
-  </div>
-</section>
 
-<section id="settings" class="page">
-  <div class="card">
-    <h3>藍牙設定</h3>
-    <div class="field">
-      <label>裝置名稱提示</label>
-      <input id="deviceName">
+    <div id="relays" class="grid"></div>
+
+    <p><small>
+      開關顯示的是本頁送出的控制狀態，不是實際接點回讀狀態。
+    </small></p>
+  </section>
+
+  <section id="groups" class="page">
+    <div class="card">
+      <h2>建立控制組合</h2>
+
+      <div class="field">
+        <label for="groupName">組合名稱</label>
+        <input id="groupName" placeholder="例如：夜間燈光">
+      </div>
+
+      <div id="groupChecks"></div>
+
+      <button id="saveGroup" style="width:100%">
+        儲存控制組合
+      </button>
     </div>
-    <div class="field">
-      <label>Service UUID</label>
-      <input id="serviceUuid">
+
+    <div class="card">
+      <h2>已儲存的組合</h2>
+      <div id="groupList">尚未建立組合</div>
     </div>
-    <div class="field">
-      <label>Characteristic UUID</label>
-      <input id="charUuid">
+  </section>
+
+  <section id="settings" class="page">
+    <div class="card">
+      <h2>藍牙設定</h2>
+
+      <div class="field">
+        <label for="deviceName">裝置名稱提示</label>
+        <input id="deviceName">
+      </div>
+
+      <div class="field">
+        <label for="serviceUuid">Service UUID</label>
+        <input id="serviceUuid">
+      </div>
+
+      <div class="field">
+        <label for="charUuid">Characteristic UUID</label>
+        <input id="charUuid">
+      </div>
+
+      <button id="saveSettings" style="width:100%">
+        儲存藍牙設定
+      </button>
+
+      <p><small>
+        裝置名稱提示不會修改 ESP32 的實際藍牙名稱。
+        若要更名，需修改 ESP32 程式並重新燒錄。
+      </small></p>
     </div>
-    <button id="saveSettings" style="width:100%">儲存藍牙設定</button>
-    <p><small>裝置名稱提示不會改變 ESP32 的實際藍牙名稱。更改實際名稱需要修改並重新燒錄 ESP32 程式。</small></p>
-  </div>
-  <div class="card">
-    <h3>繼電器名稱</h3>
-    <div id="nameInputs"></div>
-    <button id="saveNames" style="width:100%">儲存名稱</button>
-  </div>
-  <div class="card">
-    <h3>診斷紀錄</h3>
-    <button id="disconnect" class="off">中斷連線</button>
-    <button id="clearLog">清除紀錄</button>
-    <div id="log" class="log">等待操作…</div>
-  </div>
-</section>
+
+    <div class="card">
+      <h2>繼電器名稱</h2>
+      <div id="nameInputs"></div>
+      <button id="saveNames" style="width:100%">
+        儲存繼電器名稱
+      </button>
+    </div>
+
+    <div class="card">
+      <h2>診斷紀錄</h2>
+      <div class="row">
+        <button id="disconnect" class="danger">中斷連線</button>
+        <button id="clearLog">清除紀錄</button>
+      </div>
+      <div id="log" class="log">等待操作…</div>
+    </div>
+  </section>
 </main>
 
 <script>
-const DEFAULT_SERVICE="12345678-1234-5678-1234-56789abcdef0";
-const DEFAULT_CHAR="12345678-1234-5678-1234-56789abcdef1";
+"use strict";
 
-const read=(key,fallback)=>{
-  try{return JSON.parse(localStorage.getItem(key))??fallback}
-  catch{return fallback}
-};
-const store=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
-const $=id=>document.getElementById(id);
+const DEFAULT_SERVICE =
+  "12345678-1234-5678-1234-56789abcdef0";
+const DEFAULT_CHAR =
+  "12345678-1234-5678-1234-56789abcdef1";
 
-let settings=read("ec-drive-ble-settings-v1",{
-  deviceName:"ESP32-S3-Car",
-  serviceUuid:DEFAULT_SERVICE,
-  charUuid:DEFAULT_CHAR
+const KEY_SETTINGS = "ec-drive-ble-settings-v1";
+const KEY_NAMES = "ec-drive-relay-names-v2";
+const KEY_GROUPS = "ec-drive-groups-v2";
+
+const $ = id => document.getElementById(id);
+
+function load(key, fallback) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key));
+    return value ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function save(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+let settings = load(KEY_SETTINGS, {
+  deviceName: "ESP32-S3-Car",
+  serviceUuid: DEFAULT_SERVICE,
+  charUuid: DEFAULT_CHAR
 });
-let names=read("ec-drive-relay-names-v2",[
-  "繼電器 1","繼電器 2","繼電器 3","繼電器 4"
+
+let names = load(KEY_NAMES, [
+  "繼電器 1",
+  "繼電器 2",
+  "繼電器 3",
+  "繼電器 4"
 ]);
-let groups=read("ec-drive-groups-v2",[]);
-let device=null,characteristic=null;
-let states=[false,false,false,false];
 
-function log(message){
-  $("log").textContent=
-    "["+new Date().toLocaleTimeString()+"] "+message+"\n"+
-    $("log").textContent;
+let groups = load(KEY_GROUPS, []);
+let states = [false, false, false, false];
+let device = null;
+let characteristic = null;
+
+function writeLog(message) {
+  $("log").textContent =
+    "[" + new Date().toLocaleTimeString() + "] " +
+    message + "\n" + $("log").textContent;
+
+  $("log").textContent =
+    $("log").textContent.slice(0, 10000);
 }
-function showStatus(message){
-  $("status").textContent=message;
+
+function setStatus(message, detail = "") {
+  $("status").textContent = message;
+  $("deviceInfo").textContent = detail;
 }
-function delay(ms){
-  return new Promise(resolve=>setTimeout(resolve,ms));
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function renderRelays(){
-  $("relays").innerHTML="";
-  names.forEach((name,i)=>{
-    const box=document.createElement("div");
-    box.className="relay";
+/* 四路繼電器畫面 */
+function renderRelays() {
+  $("relays").innerHTML = "";
 
-    const title=document.createElement("strong");
-    title.textContent=name;
+  names.forEach((name, index) => {
+    const box = document.createElement("div");
+    box.className = "relay";
 
-    const state=document.createElement("p");
-    state.textContent=states[i]?"目前狀態：開啟":"目前狀態：關閉";
+    const title = document.createElement("strong");
+    title.textContent = name;
 
-    const button=document.createElement("button");
-    button.textContent=states[i]?"關閉":"開啟";
-    if(states[i])button.className="off";
-    button.onclick=()=>setRelay(i,!states[i]);
+    const state = document.createElement("p");
+    state.textContent = states[index] ? "狀態：開啟" : "狀態：關閉";
 
-    box.append(title,state,button);
+    const button = document.createElement("button");
+    button.textContent = states[index] ? "關閉" : "開啟";
+    if (states[index]) button.className = "danger";
+
+    button.onclick = () => setRelay(index, !states[index]);
+
+    box.append(title, state, button);
     $("relays").append(box);
   });
 }
 
-async function sendCommand(command){
-  if(!characteristic)throw Error("尚未連接 ESP32-S3");
+/* 傳送 R1:1、R1:0 等控制指令 */
+async function sendCommand(command) {
+  if (!characteristic) {
+    throw new Error("請先連接 ESP32-S3");
+  }
 
-  const data=new TextEncoder().encode(command);
-  if(characteristic.properties.writeWithoutResponse){
-    await characteristic.writeValueWithoutResponse(data);
-  }else{
-    await characteristic.writeValue(data);
+  const bytes = new TextEncoder().encode(command);
+
+  if (
+    characteristic.properties.writeWithoutResponse &&
+    characteristic.writeValueWithoutResponse
+  ) {
+    await characteristic.writeValueWithoutResponse(bytes);
+  } else if (characteristic.writeValue) {
+    await characteristic.writeValue(bytes);
+  } else {
+    throw new Error("藍牙特徵值不支援寫入");
   }
 }
 
-async function setRelay(i,on){
-  try{
-    await sendCommand("R"+(i+1)+":"+(on?1:0));
-    states[i]=on;
+async function setRelay(index, on) {
+  try {
+    await sendCommand(
+      "R" + (index + 1) + ":" + (on ? "1" : "0")
+    );
+
+    states[index] = on;
     renderRelays();
-    log(names[i]+"："+(on?"開啟":"關閉")+"，已送出指令");
-  }catch(e){
-    log("控制失敗："+e.message);
+
+    writeLog(
+      names[index] + "：" +
+      (on ? "開啟" : "關閉") + "，指令已送出"
+    );
+  } catch (error) {
+    writeLog("控制失敗：" + error.message);
   }
 }
 
-async function allRelays(on){
-  if(!characteristic){
-    log("請先連接藍牙裝置");
+async function allRelays(on) {
+  if (!characteristic) {
+    writeLog("請先連接藍牙裝置");
     return;
   }
-  for(let i=0;i<4;i++){
-    await setRelay(i,on);
+
+  for (let i = 0; i < 4; i++) {
+    await setRelay(i, on);
     await delay(150);
   }
 }
 
-async function connectBLE(){
-  if(!navigator.bluetooth){
-    log("瀏覽器不支援 Web Bluetooth，請使用支援的 Chrome 並以 HTTPS 開啟");
+/* BLE 連線 */
+async function connectBLE() {
+  if (!navigator.bluetooth) {
+    writeLog(
+      "瀏覽器不支援 Web Bluetooth。請使用支援的 Chrome，並以 HTTPS 開啟。"
+    );
     return;
   }
 
-  try{
-    const serviceUuid=$("serviceUuid").value.trim()||DEFAULT_SERVICE;
-    const charUuid=$("charUuid").value.trim()||DEFAULT_CHAR;
+  try {
+    const serviceUuid =
+      $("serviceUuid").value.trim() || DEFAULT_SERVICE;
+    const charUuid =
+      $("charUuid").value.trim() || DEFAULT_CHAR;
 
-    device=await navigator.bluetooth.requestDevice({
-      acceptAllDevices:true,
-      optionalServices:[serviceUuid]
+    writeLog("正在搜尋藍牙裝置…");
+
+    device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: [serviceUuid]
     });
 
-    device.addEventListener("gattserverdisconnected",()=>{
-      characteristic=null;
-      showStatus("藍牙已中斷");
-      $("deviceInfo").textContent="請重新連線";
-      log("藍牙連線已中斷");
-    });
+    device.addEventListener(
+      "gattserverdisconnected",
+      () => {
+        characteristic = null;
+        setStatus("藍牙已中斷", "請重新連線");
+        writeLog("藍牙連線已中斷");
+      }
+    );
 
-    showStatus("正在連線…");
-    const server=await device.gatt.connect();
-    const service=await server.getPrimaryService(serviceUuid);
-    characteristic=await service.getCharacteristic(charUuid);
+    setStatus("正在連線…", device.name || settings.deviceName);
 
-    showStatus("藍牙已連線");
-    $("deviceInfo").textContent="裝置："+(device.name||settings.deviceName);
-    log("連線成功："+(device.name||"未命名裝置"));
-  }catch(e){
-    characteristic=null;
-    showStatus("連線失敗");
-    log("連線失敗："+e.message);
+    const server = await device.gatt.connect();
+    const service = await server.getPrimaryService(serviceUuid);
+
+    characteristic = await service.getCharacteristic(charUuid);
+
+    setStatus("藍牙已連線", device.name || settings.deviceName);
+    writeLog("連線成功：" + (device.name || "未命名裝置"));
+  } catch (error) {
+    characteristic = null;
+    setStatus("連線失敗", "請檢查裝置、UUID 和藍牙狀態");
+    writeLog("連線失敗：" + error.message);
   }
 }
 
-function renderNameInputs(){
-  $("nameInputs").innerHTML="";
-  names.forEach((name,i)=>{
-    const wrap=document.createElement("div");
-    wrap.className="field";
-    const label=document.createElement("label");
-    label.textContent="第 "+(i+1)+" 路名稱";
-    const input=document.createElement("input");
-    input.id="name"+i;
-    input.value=name;
-    input.maxLength=24;
-    wrap.append(label,input);
-    $("nameInputs").append(wrap);
-  });
-}
+/* 控制組合 */
+function renderGroupChecks() {
+  $("groupChecks").innerHTML = "";
 
-function renderGroupChecks(){
-  $("groupChecks").innerHTML="";
-  names.forEach((name,i)=>{
-    const label=document.createElement("label");
-    label.style.display="block";
-    label.style.margin="10px 0";
-    const check=document.createElement("input");
-    check.type="checkbox";
-    check.id="groupCheck"+i;
-    check.style.width="auto";
-    label.append(check,document.createTextNode(" "+name));
+  names.forEach((name, index) => {
+    const label = document.createElement("label");
+    label.className = "check";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = "groupCheck" + index;
+    checkbox.style.width = "auto";
+
+    label.append(
+      checkbox,
+      document.createTextNode(" " + name)
+    );
+
     $("groupChecks").append(label);
   });
 }
 
-function renderGroups(){
-  const host=$("groupList");
-  host.innerHTML="";
-  if(!groups.length){
-    host.textContent="尚未建立組合";
+function renderGroups() {
+  const host = $("groupList");
+  host.innerHTML = "";
+
+  if (groups.length === 0) {
+    host.textContent = "尚未建立組合";
     return;
   }
 
-  groups.forEach((group,index)=>{
-    const row=document.createElement("div");
-    row.className="card";
+  groups.forEach((group, index) => {
+    const box = document.createElement("div");
+    box.className = "card";
 
-    const title=document.createElement("strong");
-    title.textContent=group.name;
+    const title = document.createElement("strong");
+    title.textContent = group.name;
 
-    const detail=document.createElement("p");
-    detail.textContent=group.relays.map(i=>names[i]).join("、");
+    const detail = document.createElement("p");
+    detail.textContent =
+      group.relays.map(i => names[i]).join("、");
 
-    const run=document.createElement("button");
-    run.textContent="執行組合";
-    run.onclick=async()=>{
-      for(const i of group.relays){
-        await setRelay(i,true);
+    const run = document.createElement("button");
+    run.textContent = "執行組合";
+    run.onclick = async () => {
+      if (!characteristic) {
+        writeLog("請先連接藍牙裝置");
+        return;
+      }
+
+      for (const i of group.relays) {
+        await setRelay(i, true);
         await delay(150);
       }
     };
 
-    const remove=document.createElement("button");
-    remove.textContent="刪除";
-    remove.className="off";
-    remove.style.marginLeft="8px";
-    remove.onclick=()=>{
-      groups.splice(index,1);
-      store("ec-drive-groups-v2",groups);
+    const remove = document.createElement("button");
+    remove.textContent = "刪除";
+    remove.className = "danger";
+    remove.style.marginLeft = "8px";
+
+    remove.onclick = () => {
+      groups.splice(index, 1);
+      save(KEY_GROUPS, groups);
       renderGroups();
+      writeLog("已刪除控制組合");
     };
 
-    row.append(title,detail,run,remove);
-    host.append(row);
+    box.append(title, detail, run, remove);
+    host.append(box);
   });
 }
 
-$("connect").onclick=connectBLE;
-$("allOn").onclick=()=>allRelays(true);
-$("allOff").onclick=()=>allRelays(false);
+/* 設定與名稱 */
+function renderNameInputs() {
+  $("nameInputs").innerHTML = "";
 
-document.querySelectorAll("[data-tab]").forEach(button=>{
-  button.onclick=()=>{
-    document.querySelectorAll("[data-tab]").forEach(b=>
-      b.classList.toggle("active",b===button)
+  names.forEach((name, index) => {
+    const field = document.createElement("div");
+    field.className = "field";
+
+    const label = document.createElement("label");
+    label.textContent = "第 " + (index + 1) + " 路名稱";
+
+    const input = document.createElement("input");
+    input.id = "name" + index;
+    input.value = name;
+    input.maxLength = 24;
+
+    field.append(label, input);
+    $("nameInputs").append(field);
+  });
+}
+
+$("connect").onclick = connectBLE;
+$("allOn").onclick = () => allRelays(true);
+$("allOff").onclick = () => allRelays(false);
+
+document.querySelectorAll("[data-tab]").forEach(button => {
+  button.onclick = () => {
+    document.querySelectorAll("[data-tab]").forEach(item =>
+      item.classList.toggle("active", item === button)
     );
-    document.querySelectorAll(".page").forEach(page=>
-      page.classList.toggle("active",page.id===button.dataset.tab)
+
+    document.querySelectorAll(".page").forEach(page =>
+      page.classList.toggle(
+        "active",
+        page.id === button.dataset.tab
+      )
     );
   };
 });
 
-$("deviceName").value=settings.deviceName;
-$("serviceUuid").value=settings.serviceUuid;
-$("charUuid").value=settings.charUuid;
+$("deviceName").value = settings.deviceName;
+$("serviceUuid").value = settings.serviceUuid;
+$("charUuid").value = settings.charUuid;
 
-$("saveSettings").onclick=()=>{
-  settings={
-    deviceName:$("deviceName").value.trim()||"ESP32-S3-Car",
-    serviceUuid:$("serviceUuid").value.trim()||DEFAULT_SERVICE,
-    charUuid:$("charUuid").value.trim()||DEFAULT_CHAR
+$("saveSettings").onclick = () => {
+  settings = {
+    deviceName: $("deviceName").value.trim() || "ESP32-S3-Car",
+    serviceUuid: $("serviceUuid").value.trim() || DEFAULT_SERVICE,
+    charUuid: $("charUuid").value.trim() || DEFAULT_CHAR
   };
-  store("ec-drive-ble-settings-v1",settings);
-  log("藍牙設定已儲存");
+
+  save(KEY_SETTINGS, settings);
+  writeLog("藍牙設定已儲存");
 };
 
-$("saveNames").onclick=()=>{
-  names=names.map((_,i)=>$("name"+i).value.trim()||"繼電器 "+(i+1));
-  store("ec-drive-relay-names-v2",names);
+$("saveNames").onclick = () => {
+  names = names.map((_, index) =>
+    $("name" + index).value.trim() || "繼電器 " + (index + 1)
+  );
+
+  save(KEY_NAMES, names);
   renderRelays();
   renderNameInputs();
   renderGroupChecks();
   renderGroups();
-  log("繼電器名稱已儲存");
+  writeLog("繼電器名稱已儲存");
 };
 
-$("saveGroup").onclick=()=>{
-  const name=$("groupName").value.trim();
-  const relays=[0,1,2,3].filter(i=>$("groupCheck"+i).checked);
+$("saveGroup").onclick = () => {
+  const name = $("groupName").value.trim();
+  const relays = [0, 1, 2, 3].filter(
+    i => $("groupCheck" + i).checked
+  );
 
-  if(!name||!relays.length){
-    log("請輸入組合名稱並至少選擇一路繼電器");
+  if (!name || relays.length === 0) {
+    writeLog("請輸入組合名稱並至少選擇一路繼電器");
     return;
   }
 
-  groups.push({name,relays});
-  store("ec-drive-groups-v2",groups);
-  $("groupName").value="";
+  groups.push({ name, relays });
+  save(KEY_GROUPS, groups);
+
+  $("groupName").value = "";
+  [0, 1, 2, 3].forEach(
+    i => $("groupCheck" + i).checked = false
+  );
+
   renderGroups();
-  log("已儲存組合："+name);
+  writeLog("已儲存組合：" + name);
 };
 
-$("disconnect").onclick=()=>{
-  if(device?.gatt?.connected)device.gatt.disconnect();
-  else{
-    characteristic=null;
-    showStatus("尚未連線");
-    log("目前沒有藍牙連線");
+$("disconnect").onclick = () => {
+  if (device && device.gatt && device.gatt.connected) {
+    device.gatt.disconnect();
+  } else {
+    characteristic = null;
+    setStatus("尚未連線");
+    writeLog("目前沒有藍牙連線");
   }
 };
-$("clearLog").onclick=()=>$("log").textContent="紀錄已清除";
+
+$("clearLog").onclick = () => {
+  $("log").textContent = "紀錄已清除";
+};
 
 renderRelays();
-renderNameInputs();
 renderGroupChecks();
+renderNameInputs();
 renderGroups();
 </script>
 </body>
