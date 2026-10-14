@@ -3,178 +3,331 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#101714">
+<meta name="description" content="Ec電驅 ESP32-S3 BLE 四路繼電器控制與 ANT BMS 電池監測">
 <title>Ec電驅</title>
+
 <style>
 :root {
   color-scheme: dark;
   --bg: #101714;
   --panel: #1b2620;
-  --line: #34453a;
+  --line: #35483b;
   --green: #8be0a0;
   --text: #f2f7f3;
   --muted: #aab8ad;
-  --red: #ff8e8e;
+  --warning: #ffd58c;
+  --red: #ff9292;
 }
 * { box-sizing: border-box; }
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
 }
-header { padding: 22px 16px 12px; }
-h1 { margin: 0; font-size: 27px; }
-header p { margin: 6px 0; color: var(--muted); }
-main { max-width: 760px; margin: auto; padding: 12px; }
-nav { display: flex; gap: 8px; margin-bottom: 14px; }
+header {
+  max-width: 780px;
+  margin: auto;
+  padding: 22px 16px 12px;
+}
+h1 { margin: 0; font-size: 28px; }
+header p { margin: 5px 0; color: var(--muted); }
+main {
+  max-width: 780px;
+  margin: auto;
+  padding: 12px;
+}
+nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+}
 nav button {
-  flex: 1; padding: 12px 5px; border-radius: 12px;
-  border: 1px solid var(--line); background: var(--panel);
+  flex: 1;
+  padding: 12px 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
   color: var(--text);
 }
 nav button.active {
-  background: var(--green); color: #102015;
-  font-weight: 700;
+  background: var(--green);
+  color: #102015;
+  font-weight: 750;
 }
 .panel {
-  background: var(--panel); border: 1px solid var(--line);
-  border-radius: 16px; padding: 15px; margin-bottom: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 15px;
+  margin-bottom: 12px;
 }
-h2 { font-size: 18px; margin: 0 0 12px; }
-h3 { font-size: 16px; margin: 0 0 8px; }
+h2 { margin: 0 0 12px; font-size: 18px; }
+h3 { margin: 0 0 8px; font-size: 15px; }
 p { line-height: 1.5; }
-button, input {
-  font: inherit;
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.row button { flex: 1; }
+.action, .secondary, .danger {
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 700;
 }
 .action {
-  padding: 12px; border: 0; border-radius: 10px;
-  background: var(--green); color: #102015;
-  font-weight: 700; cursor: pointer;
+  background: var(--green);
+  color: #102015;
+  border: 0;
 }
 .secondary {
-  padding: 11px; border: 1px solid var(--line);
-  border-radius: 10px; background: #25352b; color: var(--text);
+  background: #25352b;
+  color: var(--text);
+  border: 1px solid var(--line);
 }
-.row { display: flex; flex-wrap: wrap; gap: 8px; }
-.status { color: var(--muted); font-size: 14px; margin-top: 10px; }
+.danger {
+  background: #442929;
+  color: #ffdede;
+  border: 1px solid #754444;
+}
+button:disabled { opacity: .45; cursor: not-allowed; }
+.status {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+}
+.warning {
+  color: var(--warning);
+  font-size: 13px;
+}
+.success { color: var(--green); }
+.error { color: var(--red); }
 .relay {
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
 }
 .relay:last-child { border-bottom: 0; }
-.relay input { width: 23px; height: 23px; accent-color: var(--green); }
-.value { font-size: 26px; font-weight: 750; }
+.relay small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.relay input {
+  width: 25px;
+  height: 25px;
+  accent-color: var(--green);
+}
+.value {
+  font-size: 27px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
 .unit { color: var(--muted); font-size: 14px; }
-label { display: block; color: var(--muted); margin: 12px 0 5px; }
-input[type="text"] {
-  width: 100%; padding: 10px; border-radius: 8px;
-  border: 1px solid var(--line); background: var(--bg); color: var(--text);
+.metric {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.metric:last-child { border-bottom: 0; }
+label {
+  display: block;
+  color: var(--muted);
+  margin: 12px 0 5px;
+  font-size: 13px;
+}
+input[type="text"], input[type="number"] {
+  width: 100%;
+  padding: 11px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
 }
 pre {
-  white-space: pre-wrap; overflow-wrap: anywhere;
-  background: var(--bg); padding: 10px; border-radius: 8px;
-  font-size: 12px; max-height: 230px; overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--bg);
+  padding: 10px;
+  border-radius: 8px;
+  font: 12px/1.55 ui-monospace, monospace;
+  max-height: 300px;
+  overflow: auto;
+  user-select: text;
 }
-.hidden { display: none; }
-.warning { color: #ffd58c; font-size: 13px; }
+.hidden { display: none !important; }
+.tag {
+  display: inline-block;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--muted);
+}
+footer {
+  max-width: 780px;
+  margin: auto;
+  padding: 8px 16px 28px;
+  color: var(--muted);
+  font-size: 12px;
+}
 </style>
 </head>
+
 <body>
 <header>
   <h1>Ec電驅</h1>
   <p>ESP32-S3 四路控制・ANT BMS 電池監測</p>
+  <span class="tag">手機 BLE 直接連線</span>
 </header>
 
 <main>
-<nav>
-  <button class="active" data-tab="power">電源控制</button>
-  <button data-tab="battery">電池監測</button>
-  <button data-tab="settings">設定</button>
-</nav>
+  <nav>
+    <button class="active" data-tab="power">電源控制</button>
+    <button data-tab="battery">電池監測</button>
+    <button data-tab="settings">設定／診斷</button>
+  </nav>
 
-<section id="power">
-  <div class="panel">
-    <h2>ESP32-S3 連線</h2>
-    <div class="row">
-      <button class="action" id="connectRelay">搜尋並連線</button>
-      <button class="secondary" id="disconnectRelay">中斷連線</button>
+  <!-- 電源控制 -->
+  <section id="power">
+    <div class="panel">
+      <h2>ESP32-S3 藍牙連線</h2>
+      <div class="row">
+        <button class="action" id="connectRelay">搜尋 ESP32</button>
+        <button class="secondary" id="disconnectRelay">中斷連線</button>
+      </div>
+      <div class="status" id="relayStatus">尚未連線</div>
     </div>
-    <div class="status" id="relayStatus">尚未連線</div>
-  </div>
 
-  <div class="panel">
-    <h2>快速控制</h2>
-    <div class="row">
-      <button class="action" id="allOn">一鍵全開</button>
-      <button class="secondary" id="allOff">一鍵全關</button>
+    <div class="panel">
+      <h2>快速控制</h2>
+      <div class="row">
+        <button class="action" id="allOn">一鍵全開</button>
+        <button class="danger" id="allOff">一鍵全關</button>
+      </div>
+      <p class="warning">
+        請先在安全、無高壓負載的測試環境確認繼電器動作。
+      </p>
     </div>
-    <p class="warning">請先確認繼電器實際接線與負載安全，再使用全開功能。</p>
-  </div>
 
-  <div class="panel">
-    <h2>四路繼電器</h2>
-    <div id="relayList"></div>
-  </div>
-</section>
-
-<section id="battery" class="hidden">
-  <div class="panel">
-    <h2>ANT BMS 連線</h2>
-    <div class="row">
-      <button class="action" id="connectBms">搜尋並連線 BMS</button>
-      <button class="secondary" id="disconnectBms">中斷連線</button>
+    <div class="panel">
+      <h2>四路繼電器</h2>
+      <div id="relayList"></div>
     </div>
-    <div class="status" id="bmsStatus">尚未連線</div>
-  </div>
+  </section>
 
-  <div class="panel">
-    <h2>電池資料</h2>
-    <p>總電壓</p>
-    <div class="value" id="voltage">-- <span class="unit">V</span></div>
-    <p>目前電流</p>
-    <div class="value" id="current">-- <span class="unit">A</span></div>
-    <p>電量 SOC</p>
-    <div class="value" id="soc">-- <span class="unit">%</span></div>
-    <p class="warning" id="parseStatus">尚未確認封包欄位與倍率，不顯示推測值。</p>
-  </div>
+  <!-- 電池監測：手機直接連 BMS -->
+  <section id="battery" class="hidden">
+    <div class="panel">
+      <h2>ANT BMS 藍牙連線</h2>
+      <div class="row">
+        <button class="action" id="connectBms">搜尋並連線 BMS</button>
+        <button class="secondary" id="disconnectBms">中斷連線</button>
+      </div>
+      <div class="status" id="bmsStatus">尚未連線</div>
+      <p class="warning">
+        BMS 由手機直接連線，不經過 ESP32-S3。
+        若原廠 BMS App 正在連線，請先中斷它。
+      </p>
+    </div>
 
-  <div class="panel">
-    <h2>原始 HEX 封包</h2>
-    <div class="status" id="packetInfo">尚未收到資料</div>
-    <pre id="hexData">等待 BMS 資料...</pre>
-  </div>
-</section>
+    <div class="panel">
+      <h2>電池即時資料</h2>
+      <div class="metric">
+        <div class="unit">電池總電壓</div>
+        <div class="value" id="voltage">-- <span class="unit">V</span></div>
+      </div>
+      <div class="metric">
+        <div class="unit">目前電流</div>
+        <div class="value" id="current">-- <span class="unit">A</span></div>
+      </div>
+      <div class="metric">
+        <div class="unit">電池 SOC</div>
+        <div class="value" id="soc">-- <span class="unit">%</span></div>
+      </div>
+      <p class="warning" id="parseStatus">
+        尚未確認電壓、電流及 SOC 欄位與倍率，目前不顯示推測數值。
+      </p>
+    </div>
 
-<section id="settings" class="hidden">
-  <div class="panel">
-    <h2>藍牙設定</h2>
-    <label for="deviceName">ESP32-S3 裝置名稱（提示用）</label>
-    <input id="deviceName" type="text" value="ESP32-S3-Car">
+    <div class="panel">
+      <h2>封包接收狀態</h2>
+      <div class="status" id="packetInfo">尚未收到資料</div>
+      <div class="status" id="notifyStatus">Notify：尚未註冊</div>
+      <div class="status" id="readStatus">Read：尚未執行</div>
+      <pre id="hexData">等待 ANT BMS 資料……</pre>
+      <div class="row">
+        <button class="secondary" id="copyHex">複製 HEX</button>
+        <button class="secondary" id="readNow">立即 Read</button>
+      </div>
+    </div>
+  </section>
 
-    <label for="serviceUuid">ESP32 服務 UUID</label>
-    <input id="serviceUuid" type="text"
-      value="12345678-1234-5678-1234-56789abcdef0">
+  <!-- 設定與診斷 -->
+  <section id="settings" class="hidden">
+    <div class="panel">
+      <h2>ESP32 設定</h2>
 
-    <label for="relayUuid">繼電器特徵值 UUID</label>
-    <input id="relayUuid" type="text"
-      value="12345678-1234-5678-1234-56789abcdef1">
+      <label for="deviceName">裝置名稱提示（搜尋時仍可選擇其他名稱）</label>
+      <input id="deviceName" type="text" value="ESP32-S3-Car">
 
-    <button class="action" id="saveSettings">套用設定</button>
-    <p class="status">ANT BMS 預設使用服務 FFE0、特徵值 FFE1。</p>
-  </div>
+      <label for="serviceUuid">ESP32 服務 UUID</label>
+      <input id="serviceUuid" type="text"
+        value="12345678-1234-5678-1234-56789abcdef0">
 
-  <div class="panel">
-    <h2>診斷紀錄</h2>
-    <button class="secondary" id="clearLog">清除紀錄</button>
-    <pre id="log"></pre>
-  </div>
-</section>
+      <label for="relayUuid">繼電器特徵值 UUID</label>
+      <input id="relayUuid" type="text"
+        value="12345678-1234-5678-1234-56789abcdef1">
+
+      <label for="relayNames">繼電器名稱（以逗號分隔四個名稱）</label>
+      <input id="relayNames" type="text"
+        value="繼電器 1,繼電器 2,繼電器 3,繼電器 4">
+
+      <button class="action" id="saveSettings" style="margin-top:12px;width:100%">
+        儲存設定
+      </button>
+      <p class="status">ANT BMS：服務 FFE0，特徵值 FFE1。</p>
+    </div>
+
+    <div class="panel">
+      <h2>診斷紀錄</h2>
+      <div class="row">
+        <button class="secondary" id="clearLog">清除紀錄</button>
+        <button class="secondary" id="copyLog">複製紀錄</button>
+      </div>
+      <pre id="log"></pre>
+    </div>
+
+    <div class="panel">
+      <h2>瀏覽器資訊</h2>
+      <div class="status" id="browserInfo"></div>
+    </div>
+  </section>
 </main>
 
+<footer>
+  Ec電驅 · BMS 數值需經實測驗證。網頁與藍牙連線不能取代車輛的硬體安全保護。
+</footer>
+
 <script>
+"use strict";
+
+// =====================================================
+// 通用工具
+// =====================================================
 const $ = id => document.getElementById(id);
+
 const logBox = $("log");
 
 function log(message) {
@@ -183,48 +336,147 @@ function log(message) {
   logBox.scrollTop = logBox.scrollHeight;
 }
 
+function setStatus(id, message, type = "") {
+  const el = $(id);
+  el.textContent = message;
+  el.className = "status " + type;
+}
+
+function friendlyError(error) {
+  if (!error) return "未知錯誤";
+  if (error.name === "NotFoundError") {
+    return "沒有選擇裝置，或找不到裝置";
+  }
+  if (error.name === "SecurityError") {
+    return "瀏覽器安全限制，請確認使用 HTTPS";
+  }
+  if (error.name === "NetworkError") {
+    return "藍牙連線失敗，請確認裝置電源及距離";
+  }
+  return `${error.name || "Error"}：${error.message || error}`;
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// =====================================================
+// 分頁
+// =====================================================
 document.querySelectorAll("nav button").forEach(button => {
   button.addEventListener("click", () => {
-    document.querySelectorAll("nav button").forEach(b =>
-      b.classList.toggle("active", b === button)
-    );
-    ["power", "battery", "settings"].forEach(id =>
-      $(id).classList.toggle("hidden", id !== button.dataset.tab)
-    );
+    document.querySelectorAll("nav button").forEach(item => {
+      item.classList.toggle("active", item === button);
+    });
+
+    ["power", "battery", "settings"].forEach(id => {
+      $(id).classList.toggle("hidden", id !== button.dataset.tab);
+    });
   });
 });
 
+// =====================================================
+// 設定
+// =====================================================
+const DEFAULTS = {
+  deviceName: "ESP32-S3-Car",
+  serviceUuid: "12345678-1234-5678-1234-56789abcdef0",
+  relayUuid: "12345678-1234-5678-1234-56789abcdef1",
+  relayNames: "繼電器 1,繼電器 2,繼電器 3,繼電器 4"
+};
+
+function loadSettings() {
+  let saved = {};
+  try {
+    saved = JSON.parse(localStorage.getItem("ec-drive-ble-settings-v1") || "{}");
+  } catch (_) {}
+
+  $("deviceName").value = saved.deviceName || DEFAULTS.deviceName;
+  $("serviceUuid").value = saved.serviceUuid || DEFAULTS.serviceUuid;
+  $("relayUuid").value = saved.relayUuid || DEFAULTS.relayUuid;
+  $("relayNames").value = saved.relayNames || DEFAULTS.relayNames;
+}
+
+function getSettings() {
+  return {
+    deviceName: $("deviceName").value.trim() || DEFAULTS.deviceName,
+    serviceUuid: $("serviceUuid").value.trim(),
+    relayUuid: $("relayUuid").value.trim(),
+    relayNames: $("relayNames").value.trim()
+  };
+}
+
+$("saveSettings").addEventListener("click", () => {
+  const settings = getSettings();
+
+  if (!settings.serviceUuid || !settings.relayUuid) {
+    alert("請填寫服務 UUID 和特徵值 UUID。");
+    return;
+  }
+
+  try {
+    localStorage.setItem("ec-drive-ble-settings-v1", JSON.stringify(settings));
+    log("設定已儲存。重新連線 ESP32 時會使用新設定。");
+    alert("設定已儲存。若 ESP32 已連線，請先中斷再重新連線。");
+    drawRelays();
+  } catch (error) {
+    log("無法儲存設定：" + friendlyError(error));
+  }
+});
+
+loadSettings();
+
+// =====================================================
+// ESP32-S3 四路繼電器
+// =====================================================
 let relayDevice = null;
 let relayServer = null;
 let relayCharacteristic = null;
-let bmsDevice = null;
-let bmsCharacteristic = null;
+let relayBusy = false;
+
 let relayStates = [false, false, false, false];
 
+function getRelayNames() {
+  const names = $("relayNames").value.split(",").map(s => s.trim());
+  return [0, 1, 2, 3].map(i => names[i] || `繼電器 ${i + 1}`);
+}
+
 function drawRelays() {
-  $("relayList").innerHTML = "";
+  const container = $("relayList");
+  container.replaceChildren();
+
+  const names = getRelayNames();
+
   for (let i = 0; i < 4; i++) {
     const row = document.createElement("div");
     row.className = "relay";
 
+    const textBox = document.createElement("div");
     const title = document.createElement("strong");
-    title.textContent = `繼電器 ${i + 1}`;
+    title.textContent = names[i];
+
+    const status = document.createElement("small");
+    status.textContent = relayStates[i] ? "已送出開啟指令" : "已送出關閉指令";
+
+    textBox.append(title, status);
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = relayStates[i];
-    checkbox.setAttribute("aria-label", `繼電器 ${i + 1}`);
+    checkbox.disabled = !relayCharacteristic || relayBusy;
+    checkbox.setAttribute("aria-label", names[i]);
+
     checkbox.addEventListener("change", async () => {
       try {
         await sendRelay(i + 1, checkbox.checked);
       } catch (error) {
-        checkbox.checked = relayStates[i];
-        log(`繼電器控制失敗：${error.message}`);
+        log("繼電器控制失敗：" + friendlyError(error));
+        alert("控制失敗：" + friendlyError(error));
       }
     });
 
-    row.append(title, checkbox);
-    $("relayList").appendChild(row);
+    row.append(textBox, checkbox);
+    container.appendChild(row);
   }
 }
 
@@ -234,90 +486,463 @@ async function sendRelay(number, on) {
   }
 
   const command = `R${number}:${on ? 1 : 0}`;
-  await relayCharacteristic.writeValue(
-    new TextEncoder().encode(command)
-  );
+  const bytes = new TextEncoder().encode(command);
+
+  if (typeof relayCharacteristic.writeValueWithoutResponse === "function") {
+    try {
+      await relayCharacteristic.writeValueWithoutResponse(bytes);
+    } catch (_) {
+      await relayCharacteristic.writeValue(bytes);
+    }
+  } else {
+    await relayCharacteristic.writeValue(bytes);
+  }
 
   relayStates[number - 1] = on;
   drawRelays();
-  log(`已送出 ${command}`);
+  log(`ESP32 指令：${command}`);
 }
 
 $("connectRelay").addEventListener("click", async () => {
   try {
     if (!navigator.bluetooth) {
-      throw new Error("瀏覽器不支援 Web Bluetooth，請使用 Android Chrome 的 HTTPS 網頁");
+      throw new Error("瀏覽器不支援 Web Bluetooth，請使用支援的 Android Chrome HTTPS 網頁");
     }
 
-    const serviceUuid = $("serviceUuid").value.trim();
-    const name = $("deviceName").value.trim();
+    if (relayDevice?.gatt?.connected) {
+      relayDevice.gatt.disconnect();
+    }
 
+    const settings = getSettings();
+
+    // 不指定名稱篩選，讓使用者在清單中自行選擇裝置。
+    // optionalServices 允許連線後存取 ESP32 自訂服務。
     relayDevice = await navigator.bluetooth.requestDevice({
-      filters: [{ name: name }],
-      optionalServices: [serviceUuid]
+      acceptAllDevices: true,
+      optionalServices: [settings.serviceUuid]
     });
 
     relayDevice.addEventListener("gattserverdisconnected", () => {
-      relayCharacteristic = null;
       relayServer = null;
-      $("relayStatus").textContent = "ESP32 已中斷連線";
+      relayCharacteristic = null;
+      setStatus("relayStatus", "ESP32 已中斷連線", "error");
       log("ESP32 BLE 連線中斷");
+      drawRelays();
     });
 
-    $("relayStatus").textContent = "正在連線...";
-    relayServer = await relayDevice.gatt.connect();
+    setStatus("relayStatus", `已選擇 ${relayDevice.name || "未命名裝置"}，正在連線……`);
 
-    const service = await relayServer.getPrimaryService(serviceUuid);
-    relayCharacteristic = await service.getCharacteristic(
-      $("relayUuid").value.trim()
+    relayServer = await relayDevice.gatt.connect();
+    const service = await relayServer.getPrimaryService(settings.serviceUuid);
+    relayCharacteristic = await service.getCharacteristic(settings.relayUuid);
+
+    setStatus(
+      "relayStatus",
+      `已連線：${relayDevice.name || "未命名裝置"}`,
+      "success"
     );
 
-    $("relayStatus").textContent = `已連線：${relayDevice.name}`;
-    log(`ESP32 連線成功：${relayDevice.name}`);
+    log(`ESP32 連線成功：${relayDevice.name || "未命名裝置"}`);
+    drawRelays();
   } catch (error) {
-    $("relayStatus").textContent = `連線失敗：${error.message}`;
-    log(`ESP32 連線失敗：${error.message}`);
+    relayCharacteristic = null;
+    setStatus("relayStatus", "連線失敗：" + friendlyError(error), "error");
+    log("ESP32 連線失敗：" + friendlyError(error));
+    drawRelays();
   }
 });
 
 $("disconnectRelay").addEventListener("click", () => {
-  if (relayDevice?.gatt?.connected) relayDevice.gatt.disconnect();
+  try {
+    if (relayDevice?.gatt?.connected) relayDevice.gatt.disconnect();
+  } catch (_) {}
+
   relayCharacteristic = null;
-  $("relayStatus").textContent = "已中斷連線";
+  relayServer = null;
+  setStatus("relayStatus", "已中斷連線");
+  log("已要求中斷 ESP32 連線");
+  drawRelays();
 });
 
-$("allOn").addEventListener("click", async () => {
+async function setAllRelays(on) {
+  if (!relayCharacteristic) {
+    alert("請先連線 ESP32。");
+    return;
+  }
+
+  if (relayBusy) return;
+  relayBusy = true;
+  drawRelays();
+
   try {
     for (let i = 1; i <= 4; i++) {
-      await sendRelay(i, true);
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await sendRelay(i, on);
+      await delay(150);
+    }
+    log(on ? "四路全開指令已送出" : "四路全關指令已送出");
+  } catch (error) {
+    log("批次控制中止：" + friendlyError(error));
+    alert("批次控制中止：" + friendlyError(error));
+  } finally {
+    relayBusy = false;
+    drawRelays();
+  }
+}
+
+$("allOn").addEventListener("click", () => setAllRelays(true));
+$("allOff").addEventListener("click", () => setAllRelays(false));
+
+// =====================================================
+// ANT BMS：手機直接連線
+// BLE Service FFE0 / Characteristic FFE1
+// Notify + Read
+// =====================================================
+const BMS_SERVICE_UUID = 0xFFE0;
+const BMS_CHARACTERISTIC_UUID = 0xFFE1;
+const READ_INTERVAL_MS = 3000;
+
+let bmsDevice = null;
+let bmsServer = null;
+let bmsCharacteristic = null;
+let bmsNotifyActive = false;
+let bmsReadTimer = null;
+let bmsReadBusy = false;
+let bmsPacketCount = 0;
+let bmsLastHex = "";
+let bmsLastBytes = null;
+let bmsLastTime = null;
+
+function bytesToHex(bytes) {
+  return Array.from(bytes, byte =>
+    byte.toString(16).padStart(2, "0").toUpperCase()
+  ).join(" ");
+}
+
+function inspectPacket(bytes) {
+  const length = bytes.length;
+  const startsCorrectly =
+    length >= 2 && bytes[0] === 0x7E && bytes[1] === 0xA1;
+
+  const endsCorrectly =
+    length >= 2 &&
+    bytes[length - 2] === 0xAA &&
+    bytes[length - 1] === 0x55;
+
+  return {
+    length,
+    startsCorrectly,
+    endsCorrectly,
+    expectedLength: length === 186
+  };
+}
+
+function renderBmsPacket(bytes, source) {
+  const copy = new Uint8Array(bytes);
+  const hex = bytesToHex(copy);
+  const check = inspectPacket(copy);
+
+  bmsLastHex = hex;
+  bmsLastBytes = copy;
+  bmsLastTime = new Date();
+  bmsPacketCount++;
+
+  $("hexData").textContent = hex;
+
+  const parts = [
+    `來源：${source}`,
+    `資料長度：${check.length} bytes`,
+    `接收次數：${bmsPacketCount}`,
+    `最後接收：${bmsLastTime.toLocaleTimeString()}`,
+    `開頭 7E A1：${check.startsCorrectly ? "符合" : "不符合"}`,
+    `結尾 AA 55：${check.endsCorrectly ? "符合" : "不符合"}`,
+    `長度 186 bytes：${check.expectedLength ? "符合" : "不符合"}`
+  ];
+
+  $("packetInfo").textContent = parts.join(" ｜ ");
+
+  if (check.length === 186 && check.startsCorrectly && check.endsCorrectly) {
+    setStatus("parseStatus",
+      "封包長度、開頭與結尾符合目前預期；電壓／電流／SOC 欄位與倍率仍待驗證。",
+      "success"
+    );
+  } else {
+    setStatus("parseStatus",
+      "收到資料，但封包長度或起訖標記不完全符合預期。請檢查 HEX。",
+      "warning"
+    );
+  }
+
+  // 不在欄位與倍率未驗證前猜測電池數值。
+  $("voltage").innerHTML = '-- <span class="unit">V</span>';
+  $("current").innerHTML = '-- <span class="unit">A</span>';
+  $("soc").innerHTML = '-- <span class="unit">%</span>';
+
+  log(`BMS ${source}：${check.length} bytes，封包第 ${bmsPacketCount} 次`);
+}
+
+function handleBmsValueChanged(event) {
+  try {
+    const data = event.target.value;
+    if (!data || data.byteLength === 0) {
+      log("BMS Notify 收到空資料");
+      return;
+    }
+
+    renderBmsPacket(
+      new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
+      "Notify"
+    );
+  } catch (error) {
+    log("處理 BMS Notify 失敗：" + friendlyError(error));
+  }
+}
+
+async function readBmsOnce(source = "Read") {
+  if (!bmsCharacteristic || !bmsServer?.connected) {
+    setStatus("readStatus", "Read：BMS 尚未連線");
+    return;
+  }
+
+  if (!bmsCharacteristic.properties.read) {
+    setStatus("readStatus", "Read：特徵值不支援 Read");
+    return;
+  }
+
+  if (bmsReadBusy) return;
+  bmsReadBusy = true;
+
+  try {
+    const value = await bmsCharacteristic.readValue();
+
+    if (value.byteLength > 0) {
+      renderBmsPacket(
+        new Uint8Array(value.buffer, value.byteOffset, value.byteLength),
+        source
+      );
+      setStatus("readStatus", `Read：成功，${value.byteLength} bytes`, "success");
+    } else {
+      setStatus("readStatus", "Read：取得空資料", "warning");
     }
   } catch (error) {
-    log(`全開中止：${error.message}`);
+    setStatus("readStatus", "Read 失敗：" + friendlyError(error), "error");
+    log("BMS Read 失敗：" + friendlyError(error));
+  } finally {
+    bmsReadBusy = false;
+  }
+}
+
+function stopBmsReadTimer() {
+  if (bmsReadTimer !== null) {
+    clearInterval(bmsReadTimer);
+    bmsReadTimer = null;
+  }
+}
+
+async function startBmsReadTimer() {
+  stopBmsReadTimer();
+
+  // 先立即讀取，再每 3 秒讀一次。
+  await readBmsOnce("Read");
+
+  bmsReadTimer = setInterval(() => {
+    readBmsOnce("Read");
+  }, READ_INTERVAL_MS);
+}
+
+async function disconnectBms() {
+  stopBmsReadTimer();
+  bmsReadBusy = false;
+
+  if (bmsCharacteristic) {
+    try {
+      bmsCharacteristic.removeEventListener(
+        "characteristicvaluechanged",
+        handleBmsValueChanged
+      );
+    } catch (_) {}
+
+    if (bmsNotifyActive) {
+      try {
+        await bmsCharacteristic.stopNotifications();
+      } catch (_) {}
+    }
+  }
+
+  bmsNotifyActive = false;
+  bmsCharacteristic = null;
+
+  try {
+    if (bmsDevice?.gatt?.connected) bmsDevice.gatt.disconnect();
+  } catch (_) {}
+
+  bmsServer = null;
+  setStatus("bmsStatus", "已中斷 BMS 連線");
+  setStatus("notifyStatus", "Notify：尚未註冊");
+  setStatus("readStatus", "Read：尚未執行");
+  log("已要求中斷 ANT BMS 連線");
+}
+
+$("connectBms").addEventListener("click", async () => {
+  try {
+    if (!navigator.bluetooth) {
+      throw new Error("瀏覽器不支援 Web Bluetooth，請使用支援的 Android Chrome HTTPS 網頁");
+    }
+
+    await disconnectBms();
+
+    setStatus("bmsStatus", "正在搜尋 ANT BMS……");
+
+    // 不依賴固定裝置名稱，讓手機使用者選擇 ANT BMS。
+    // 宣告 FFE0 為 optional service，讓網頁有權存取它。
+    bmsDevice = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: [BMS_SERVICE_UUID]
+    });
+
+    bmsDevice.addEventListener("gattserverdisconnected", () => {
+      stopBmsReadTimer();
+      bmsServer = null;
+      bmsCharacteristic = null;
+      bmsNotifyActive = false;
+
+      setStatus("bmsStatus", "ANT BMS 已中斷連線", "error");
+      setStatus("notifyStatus", "Notify：連線中斷");
+      setStatus("readStatus", "Read：連線中斷");
+      log("ANT BMS BLE 連線中斷");
+    });
+
+    setStatus(
+      "bmsStatus",
+      `已選擇 ${bmsDevice.name || "未命名裝置"}，正在連線……`
+    );
+
+    bmsServer = await bmsDevice.gatt.connect();
+
+    log(`BMS BLE 已連線：${bmsDevice.name || "未命名裝置"}`);
+
+    const service = await bmsServer.getPrimaryService(BMS_SERVICE_UUID);
+    bmsCharacteristic = await service.getCharacteristic(
+      BMS_CHARACTERISTIC_UUID
+    );
+
+    log("已找到 FFE0 服務及 FFE1 特徵值");
+
+    const properties = bmsCharacteristic.properties;
+    log(
+      `FFE1 能力：Read=${properties.read}，` +
+      `Notify=${properties.notify}，` +
+      `Indicate=${properties.indicate}，` +
+      `Write=${properties.write}`
+    );
+
+    setStatus(
+      "bmsStatus",
+      `已連線：${bmsDevice.name || "ANT BMS"}`,
+      "success"
+    );
+
+    // Notify：註冊通知並監聽資料變化。
+    if (properties.notify || properties.indicate) {
+      try {
+        bmsCharacteristic.addEventListener(
+          "characteristicvaluechanged",
+          handleBmsValueChanged
+        );
+
+        await bmsCharacteristic.startNotifications();
+        bmsNotifyActive = true;
+        setStatus("notifyStatus", "Notify：註冊成功，等待通知", "success");
+        log("BMS Notify 註冊成功");
+      } catch (error) {
+        bmsNotifyActive = false;
+        setStatus(
+          "notifyStatus",
+          "Notify 註冊失敗：" + friendlyError(error),
+          "warning"
+        );
+        log("BMS Notify 註冊失敗：" + friendlyError(error));
+      }
+    } else {
+      setStatus("notifyStatus", "Notify：此特徵值不支援通知", "warning");
+      log("FFE1 不支援 Notify 或 Indicate");
+    }
+
+    // Read：獨立定時讀取，與 Notify 同時使用。
+    if (properties.read) {
+      await startBmsReadTimer();
+      log(`BMS 已啟動每 ${READ_INTERVAL_MS / 1000} 秒 Read`);
+    } else {
+      setStatus("readStatus", "Read：此特徵值不支援讀取", "warning");
+      log("FFE1 不支援 Read");
+    }
+
+    if (!properties.read && !properties.notify && !properties.indicate) {
+      setStatus("bmsStatus", "已連線，但 FFE1 不支援 Read／Notify", "warning");
+    }
+  } catch (error) {
+    stopBmsReadTimer();
+    bmsCharacteristic = null;
+    bmsServer = null;
+
+    setStatus("bmsStatus", "連線失敗：" + friendlyError(error), "error");
+    log("ANT BMS 連線失敗：" + friendlyError(error));
   }
 });
 
-$("allOff").addEventListener("click", async () => {
+$("disconnectBms").addEventListener("click", () => {
+  disconnectBms();
+});
+
+$("readNow").addEventListener("click", () => {
+  readBmsOnce("手動 Read");
+});
+
+$("copyHex").addEventListener("click", async () => {
+  if (!bmsLastHex) {
+    alert("目前沒有 HEX 資料可以複製。");
+    return;
+  }
+
   try {
-    for (let i = 1; i <= 4; i++) {
-      await sendRelay(i, false);
-      await new Promise(resolve => setTimeout(resolve, 150));
-    }
-  } catch (error) {
-    log(`全關中止：${error.message}`);
+    await navigator.clipboard.writeText(bmsLastHex);
+    log("已複製最近一次 BMS HEX");
+    alert("HEX 已複製。");
+  } catch (_) {
+    // 部分瀏覽器剪貼簿 API 不可用時，改用選取文字。
+    const range = document.createRange();
+    range.selectNodeContents($("hexData"));
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    alert("請長按選取的 HEX 文字並複製。");
   }
 });
 
-$("saveSettings").addEventListener("click", () => {
-  log("已套用藍牙設定；請中斷舊連線後重新連線。");
-  alert("設定已套用。若要永久保存，請保留這些設定值。");
-});
-
+// =====================================================
+// 診斷
+// =====================================================
 $("clearLog").addEventListener("click", () => {
   logBox.textContent = "";
 });
 
+$("copyLog").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(logBox.textContent);
+    alert("診斷紀錄已複製。");
+  } catch (_) {
+    alert("請手動選取診斷紀錄並複製。");
+  }
+});
+
+$("browserInfo").textContent =
+  `Web Bluetooth：${navigator.bluetooth ? "瀏覽器有提供 API" : "不支援或非安全環境"}\n` +
+  `HTTPS／安全環境：${window.isSecureContext ? "是" : "否"}\n` +
+  `瀏覽器：${navigator.userAgent}`;
+
 drawRelays();
+log("Ec電驅已啟動");
+log("BMS 由手機直接連線，不經過 ESP32-S3");
+log("電壓、電流及 SOC 尚未套用未驗證的欄位倍率");
 </script>
 </body>
 </html>
