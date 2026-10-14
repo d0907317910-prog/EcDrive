@@ -2,594 +2,1271 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0b1512">
-<meta name="description" content="Ec電驅 ESP32-S3 BLE 四路繼電器控制">
-<title>Ec電驅｜四路控制</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F8DDE8">
+  <meta name="description" content="Ec電驅 ESP32-S3 BLE 四路繼電器控制">
+  <title>Ec電驅｜四路控制</title>
 
-<style>
-:root {
-  --bg:#0b1512;
-  --panel:#172820;
-  --line:#35513e;
-  --green:#91f2b5;
-  --text:#f1fff5;
-  --muted:#a8c0b0;
-  --red:#633333;
-}
-* { box-sizing:border-box; }
-body {
-  margin:0;
-  padding:18px;
-  background:var(--bg);
-  color:var(--text);
-  font-family:Arial,"Noto Sans TC",sans-serif;
-}
-main { max-width:760px; margin:auto; }
-h1 { margin-bottom:5px; color:var(--green); }
-h2 { font-size:18px; }
-p { color:var(--muted); line-height:1.6; }
-button,input {
-  font:inherit;
-}
-button {
-  padding:12px;
-  border:1px solid var(--line);
-  border-radius:10px;
-  background:var(--green);
-  color:#102019;
-  font-weight:bold;
-  cursor:pointer;
-}
-button:disabled { opacity:.5; }
-input {
-  width:100%;
-  padding:11px;
-  border:1px solid var(--line);
-  border-radius:9px;
-  background:#101a15;
-  color:white;
-}
-.card {
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:15px;
-  padding:15px;
-  margin:14px 0;
-}
-.row {
-  display:flex;
-  gap:9px;
-  flex-wrap:wrap;
-}
-.row button { flex:1; }
-.danger { background:var(--red); color:white; }
-.tabs {
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:6px;
-  margin:15px 0;
-}
-.tabs button {
-  background:#263b2d;
-  color:white;
-  font-size:13px;
-  padding:11px 5px;
-}
-.tabs button.active {
-  background:var(--green);
-  color:#102019;
-}
-.page { display:none; }
-.page.active { display:block; }
-.grid {
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:10px;
-}
-.relay {
-  background:#20352a;
-  border:1px solid var(--line);
-  border-radius:13px;
-  padding:13px;
-  overflow-wrap:anywhere;
-}
-.relay button { width:100%; margin-top:12px; }
-.relay p { margin-bottom:0; }
-.field { margin:12px 0; }
-.field label {
-  display:block;
-  color:var(--muted);
-  font-size:13px;
-  margin-bottom:6px;
-}
-.check { display:block; margin:10px 0; }
-.check input { width:auto; }
-.log {
-  background:#07100b;
-  border-radius:8px;
-  padding:10px;
-  max-height:230px;
-  overflow:auto;
-  white-space:pre-wrap;
-  overflow-wrap:anywhere;
-  font-size:12px;
-}
-small { color:var(--muted); }
-@media(min-width:650px) {
-  .grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
-}
-</style>
+  <link rel="manifest" href="./manifest.json">
+
+  <style>
+    :root {
+      --bg: #F8DDE8;
+      --panel: #FFF0F5;
+      --line: #E8AFC5;
+      --pink: #E89AB7;
+      --pink-dark: #A64D75;
+      --text: #633D50;
+      --muted: #956C7F;
+      --white: #FFFFFF;
+      --red: #C15D85;
+      --green: #5D9C82;
+      --shadow: 0 4px 14px rgba(166, 77, 117, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      padding-bottom: calc(24px + env(safe-area-inset-bottom));
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Noto Sans TC", sans-serif;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 10px 2px 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 27px;
+      letter-spacing: 1px;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .connection-card,
+    .card {
+      margin-bottom: 14px;
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .connection-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .connection-title {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 5px 10px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--white);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .pill.online {
+      color: var(--green);
+      border-color: #B6DCCB;
+      background: #F5FFF9;
+    }
+
+    .pill.offline {
+      color: var(--red);
+    }
+
+    .device-name {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      min-height: 42px;
+      padding: 11px 14px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--white);
+      color: var(--pink-dark);
+      font-weight: 700;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:active {
+      transform: scale(0.99);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .full {
+      width: 100%;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+    }
+
+    .button-row button {
+      flex: 1;
+      min-width: 110px;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .tabs button {
+      padding: 11px 5px;
+      background: var(--white);
+      color: var(--pink-dark);
+      font-size: 13px;
+    }
+
+    .tabs button.active {
+      background: var(--white);
+      color: var(--pink-dark);
+      border-color: #D67FA2;
+      box-shadow: inset 0 0 0 1px #D67FA2;
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 17px;
+    }
+
+    .section-note {
+      margin: -4px 0 14px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .relay-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .relay {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-width: 0;
+      padding: 13px;
+      background: #FFF8FB;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+    }
+
+    .relay-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .relay strong {
+      display: block;
+      font-size: 15px;
+      overflow-wrap: anywhere;
+    }
+
+    .relay small {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .relay-state {
+      flex: 0 0 auto;
+      padding: 5px 8px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--white);
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .relay-state.on {
+      color: var(--green);
+      border-color: #B6DCCB;
+    }
+
+    .relay button {
+      flex: 0 0 76px;
+      width: 76px;
+      min-height: 40px;
+      padding: 8px;
+      background: var(--white);
+      color: var(--pink-dark);
+    }
+
+    .relay button.danger {
+      color: var(--red);
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .field input,
+    .field select {
+      display: block;
+      width: 100%;
+      min-height: 43px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      outline: none;
+      background: var(--white);
+      color: var(--text);
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--pink);
+      box-shadow: 0 0 0 2px rgba(232, 154, 183, 0.18);
+    }
+
+    .group-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .group-item {
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #FFF8FB;
+    }
+
+    .group-item strong {
+      display: block;
+      margin-bottom: 5px;
+      overflow-wrap: anywhere;
+    }
+
+    .group-item p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .group-item .button-row button {
+      min-width: 75px;
+      padding: 9px;
+    }
+
+    .divider {
+      height: 1px;
+      margin: 18px 0;
+      background: var(--line);
+    }
+
+    .log {
+      max-height: 260px;
+      overflow-y: auto;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #FFF8FB;
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    footer {
+      padding: 4px 0 14px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    @media (max-width: 360px) {
+      body {
+        padding: 10px;
+      }
+
+      .relay {
+        gap: 6px;
+        padding: 10px 8px;
+      }
+
+      .relay strong {
+        font-size: 13px;
+      }
+
+      .relay-state {
+        padding: 4px 6px;
+        font-size: 10px;
+      }
+
+      .relay button {
+        flex-basis: 64px;
+        width: 64px;
+        padding: 7px 4px;
+        font-size: 12px;
+      }
+    }
+  </style>
 </head>
 
 <body>
-<main>
-  <h1>Ec電驅</h1>
-  <p>ESP32-S3 BLE 四路繼電器控制</p>
+  <main class="app">
+    <header>
+      <h1>Ec電驅</h1>
+      <p class="subtitle">ESP32-S3 BLE 四路控制</p>
+    </header>
 
-  <div class="card">
-    <strong id="status">尚未連線</strong>
-    <p id="deviceInfo">請連接 ESP32-S3</p>
-    <button id="connect">搜尋藍牙裝置</button>
-  </div>
-
-  <nav class="tabs">
-    <button class="active" data-tab="power">電源控制</button>
-    <button data-tab="groups">控制組合</button>
-    <button data-tab="settings">設定／診斷</button>
-  </nav>
-
-  <section id="power" class="page active">
-    <div class="card row">
-      <button id="allOn">一鍵全開</button>
-      <button id="allOff" class="danger">一鍵全關</button>
-    </div>
-
-    <div id="relays" class="grid"></div>
-
-    <p><small>
-      開關顯示的是本頁送出的控制狀態，不是實際接點回讀狀態。
-    </small></p>
-  </section>
-
-  <section id="groups" class="page">
-    <div class="card">
-      <h2>建立控制組合</h2>
-
-      <div class="field">
-        <label for="groupName">組合名稱</label>
-        <input id="groupName" placeholder="例如：夜間燈光">
+    <section class="connection-card">
+      <div class="connection-top">
+        <span class="connection-title">藍牙連線狀態</span>
+        <span id="connectionStatus" class="pill offline">尚未連線</span>
       </div>
 
-      <div id="groupChecks"></div>
+      <p id="deviceName" class="device-name">目前裝置：無</p>
 
-      <button id="saveGroup" style="width:100%">
-        儲存控制組合
-      </button>
-    </div>
-
-    <div class="card">
-      <h2>已儲存的組合</h2>
-      <div id="groupList">尚未建立組合</div>
-    </div>
-  </section>
-
-  <section id="settings" class="page">
-    <div class="card">
-      <h2>藍牙設定</h2>
-
-      <div class="field">
-        <label for="deviceName">裝置名稱提示</label>
-        <input id="deviceName">
+      <div class="button-row">
+        <button id="connectBtn" class="full">搜尋所有藍牙裝置</button>
+        <button id="disconnectBtn" disabled>中斷連線</button>
       </div>
 
-      <div class="field">
-        <label for="serviceUuid">Service UUID</label>
-        <input id="serviceUuid">
+      <p class="hint">
+        請使用支援 Web Bluetooth 的瀏覽器，並允許藍牙權限。
+        ESP32-S3 必須已開機，且使用相同的服務與特徵值 UUID。
+      </p>
+    </section>
+
+    <nav class="tabs" aria-label="功能分頁">
+      <button class="active" data-tab="control">電源控制</button>
+      <button data-tab="groups">控制組合</button>
+      <button data-tab="settings">設定／診斷</button>
+    </nav>
+
+    <!-- 電源控制 -->
+    <section id="tab-control">
+      <div class="card">
+        <h2 class="section-title">快速控制</h2>
+        <p class="section-note">控制四路繼電器；請先連接 ESP32-S3。</p>
+
+        <div class="button-row">
+          <button id="allOnBtn">一鍵全開</button>
+          <button id="allOffBtn">一鍵全關</button>
+        </div>
       </div>
 
-      <div class="field">
-        <label for="charUuid">Characteristic UUID</label>
-        <input id="charUuid">
+      <div class="card">
+        <h2 class="section-title">四路繼電器</h2>
+        <div id="relayList" class="relay-list"></div>
+      </div>
+    </section>
+
+    <!-- 控制組合 -->
+    <section id="tab-groups" class="hidden">
+      <div class="card">
+        <h2 class="section-title">新增控制組合</h2>
+        <p class="section-note">
+          勾選要一起開啟的繼電器。組合設定會儲存在這台裝置的瀏覽器。
+        </p>
+
+        <div class="field">
+          <label for="groupName">組合名稱</label>
+          <input id="groupName" maxlength="40" placeholder="例如：夜間照明">
+        </div>
+
+        <div id="groupChecks" class="field"></div>
+
+        <button id="saveGroupBtn" class="full">儲存控制組合</button>
       </div>
 
-      <button id="saveSettings" style="width:100%">
-        儲存藍牙設定
-      </button>
-
-      <p><small>
-        裝置名稱提示不會修改 ESP32 的實際藍牙名稱。
-        若要更名，需修改 ESP32 程式並重新燒錄。
-      </small></p>
-    </div>
-
-    <div class="card">
-      <h2>繼電器名稱</h2>
-      <div id="nameInputs"></div>
-      <button id="saveNames" style="width:100%">
-        儲存繼電器名稱
-      </button>
-    </div>
-
-    <div class="card">
-      <h2>診斷紀錄</h2>
-      <div class="row">
-        <button id="disconnect" class="danger">中斷連線</button>
-        <button id="clearLog">清除紀錄</button>
+      <div class="card">
+        <h2 class="section-title">已儲存的組合</h2>
+        <div id="groupList" class="group-list"></div>
       </div>
-      <div id="log" class="log">等待操作…</div>
-    </div>
-  </section>
-</main>
+    </section>
 
-<script>
-"use strict";
+    <!-- 設定與診斷 -->
+    <section id="tab-settings" class="hidden">
+      <div class="card">
+        <h2 class="section-title">繼電器名稱設定</h2>
+        <p class="section-note">修改名稱只會改變網頁顯示，不會更改 ESP32 的 GPIO。</p>
 
-const DEFAULT_SERVICE =
-  "12345678-1234-5678-1234-56789abcdef0";
-const DEFAULT_CHAR =
-  "12345678-1234-5678-1234-56789abcdef1";
+        <div id="relayNameFields"></div>
+        <button id="saveNamesBtn" class="full">儲存繼電器名稱</button>
+      </div>
 
-const KEY_SETTINGS = "ec-drive-ble-settings-v1";
-const KEY_NAMES = "ec-drive-relay-names-v2";
-const KEY_GROUPS = "ec-drive-groups-v2";
+      <div class="card">
+        <h2 class="section-title">藍牙設定</h2>
 
-const $ = id => document.getElementById(id);
+        <div class="field">
+          <label for="serviceUuid">Service UUID</label>
+          <input id="serviceUuid" autocomplete="off" spellcheck="false">
+        </div>
 
-function load(key, fallback) {
-  try {
-    const value = JSON.parse(localStorage.getItem(key));
-    return value ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
+        <div class="field">
+          <label for="characteristicUuid">Characteristic UUID</label>
+          <input id="characteristicUuid" autocomplete="off" spellcheck="false">
+        </div>
 
-function save(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
+        <button id="saveBleBtn" class="full">儲存藍牙設定</button>
 
-let settings = load(KEY_SETTINGS, {
-  deviceName: "ESP32-S3-Car",
-  serviceUuid: DEFAULT_SERVICE,
-  charUuid: DEFAULT_CHAR
-});
+        <p class="hint">
+          修改 UUID 後，請中斷目前連線再重新連接。
+          網頁無法遠端修改 ESP32 韌體內的藍牙名稱。
+        </p>
+      </div>
 
-let names = load(KEY_NAMES, [
-  "繼電器 1",
-  "繼電器 2",
-  "繼電器 3",
-  "繼電器 4"
-]);
+      <div class="card">
+        <h2 class="section-title">連線診斷</h2>
 
-let groups = load(KEY_GROUPS, []);
-let states = [false, false, false, false];
-let device = null;
-let characteristic = null;
+        <div class="button-row">
+          <button id="testBtn">測試連線</button>
+          <button id="clearLogBtn">清除紀錄</button>
+        </div>
 
-function writeLog(message) {
-  $("log").textContent =
-    "[" + new Date().toLocaleTimeString() + "] " +
-    message + "\n" + $("log").textContent;
+        <div class="divider"></div>
+        <div id="log" class="log">Ec電驅已啟動，等待操作……</div>
+      </div>
 
-  $("log").textContent =
-    $("log").textContent.slice(0, 10000);
-}
+      <div class="card">
+        <h2 class="section-title">安裝說明</h2>
+        <p class="hint">
+          1. 使用 HTTPS 網址開啟本頁。<br>
+          2. 若瀏覽器提供安裝選項，可選擇加入主畫面。<br>
+          3. 若沒有安裝選項，可使用瀏覽器選單中的「加到主畫面」。<br>
+          4. 是否能安裝為 PWA，取決於 manifest、圖示、Service Worker 及瀏覽器支援。
+        </p>
+        <button id="installBtn" class="full hidden">安裝 Ec電驅</button>
+      </div>
+    </section>
 
-function setStatus(message, detail = "") {
-  $("status").textContent = message;
-  $("deviceInfo").textContent = detail;
-}
+    <footer>Ec電驅 · ESP32-S3 BLE Controller</footer>
+  </main>
 
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+  <script>
+    "use strict";
 
-/* 四路繼電器畫面 */
-function renderRelays() {
-  $("relays").innerHTML = "";
+    // ==============================
+    // 基本設定
+    // ==============================
 
-  names.forEach((name, index) => {
-    const box = document.createElement("div");
-    box.className = "relay";
+    const DEFAULT_SERVICE_UUID =
+      "12345678-1234-5678-1234-56789abcdef0";
 
-    const title = document.createElement("strong");
-    title.textContent = name;
+    const DEFAULT_CHARACTERISTIC_UUID =
+      "12345678-1234-5678-1234-56789abcdef1";
 
-    const state = document.createElement("p");
-    state.textContent = states[index] ? "狀態：開啟" : "狀態：關閉";
+    const KEYS = {
+      ble: "ec-drive-ble-settings-v1",
+      names: "ec-drive-relay-names-v2",
+      groups: "ec-drive-groups-v2"
+    };
 
-    const button = document.createElement("button");
-    button.textContent = states[index] ? "關閉" : "開啟";
-    if (states[index]) button.className = "danger";
+    const DEFAULT_NAMES = [
+      "繼電器 1",
+      "繼電器 2",
+      "繼電器 3",
+      "繼電器 4"
+    ];
 
-    button.onclick = () => setRelay(index, !states[index]);
+    let relayNames = loadJSON(KEYS.names, DEFAULT_NAMES.slice());
+    let groups = loadJSON(KEYS.groups, []);
 
-    box.append(title, state, button);
-    $("relays").append(box);
-  });
-}
-
-/* 傳送 R1:1、R1:0 等控制指令 */
-async function sendCommand(command) {
-  if (!characteristic) {
-    throw new Error("請先連接 ESP32-S3");
-  }
-
-  const bytes = new TextEncoder().encode(command);
-
-  if (
-    characteristic.properties.writeWithoutResponse &&
-    characteristic.writeValueWithoutResponse
-  ) {
-    await characteristic.writeValueWithoutResponse(bytes);
-  } else if (characteristic.writeValue) {
-    await characteristic.writeValue(bytes);
-  } else {
-    throw new Error("藍牙特徵值不支援寫入");
-  }
-}
-
-async function setRelay(index, on) {
-  try {
-    await sendCommand(
-      "R" + (index + 1) + ":" + (on ? "1" : "0")
-    );
-
-    states[index] = on;
-    renderRelays();
-
-    writeLog(
-      names[index] + "：" +
-      (on ? "開啟" : "關閉") + "，指令已送出"
-    );
-  } catch (error) {
-    writeLog("控制失敗：" + error.message);
-  }
-}
-
-async function allRelays(on) {
-  if (!characteristic) {
-    writeLog("請先連接藍牙裝置");
-    return;
-  }
-
-  for (let i = 0; i < 4; i++) {
-    await setRelay(i, on);
-    await delay(150);
-  }
-}
-
-/* BLE 連線 */
-async function connectBLE() {
-  if (!navigator.bluetooth) {
-    writeLog(
-      "瀏覽器不支援 Web Bluetooth。請使用支援的 Chrome，並以 HTTPS 開啟。"
-    );
-    return;
-  }
-
-  try {
-    const serviceUuid =
-      $("serviceUuid").value.trim() || DEFAULT_SERVICE;
-    const charUuid =
-      $("charUuid").value.trim() || DEFAULT_CHAR;
-
-    writeLog("正在搜尋藍牙裝置…");
-
-    device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: [serviceUuid]
+    let bleSettings = loadJSON(KEYS.ble, {
+      serviceUuid: DEFAULT_SERVICE_UUID,
+      characteristicUuid: DEFAULT_CHARACTERISTIC_UUID
     });
 
-    device.addEventListener(
-      "gattserverdisconnected",
-      () => {
-        characteristic = null;
-        setStatus("藍牙已中斷", "請重新連線");
-        writeLog("藍牙連線已中斷");
+    let bluetoothDevice = null;
+    let gattServer = null;
+    let writeCharacteristic = null;
+    let connected = false;
+    let busy = false;
+    let installPrompt = null;
+
+    const relayStates = [false, false, false, false];
+
+    const $ = (id) => document.getElementById(id);
+
+    function loadJSON(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (error) {
+        console.warn("讀取設定失敗：", key, error);
+        return fallback;
       }
-    );
+    }
 
-    setStatus("正在連線…", device.name || settings.deviceName);
+    function saveJSON(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+        return true;
+      } catch (error) {
+        logMessage("儲存失敗：" + error.message);
+        return false;
+      }
+    }
 
-    const server = await device.gatt.connect();
-    const service = await server.getPrimaryService(serviceUuid);
+    function logMessage(message) {
+      const box = $("log");
+      if (!box) return;
 
-    characteristic = await service.getCharacteristic(charUuid);
+      const time = new Date().toLocaleTimeString("zh-TW", {
+        hour12: false
+      });
 
-    setStatus("藍牙已連線", device.name || settings.deviceName);
-    writeLog("連線成功：" + (device.name || "未命名裝置"));
-  } catch (error) {
-    characteristic = null;
-    setStatus("連線失敗", "請檢查裝置、UUID 和藍牙狀態");
-    writeLog("連線失敗：" + error.message);
-  }
-}
+      box.textContent += "\n[" + time + "] " + message;
+      box.scrollTop = box.scrollHeight;
+    }
 
-/* 控制組合 */
-function renderGroupChecks() {
-  $("groupChecks").innerHTML = "";
+    function setBusy(value) {
+      busy = value;
+      updateButtons();
+    }
 
-  names.forEach((name, index) => {
-    const label = document.createElement("label");
-    label.className = "check";
+    function updateButtons() {
+      $("connectBtn").disabled = busy || connected;
+      $("disconnectBtn").disabled = busy || !connected;
 
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.id = "groupCheck" + index;
-    checkbox.style.width = "auto";
+      $("allOnBtn").disabled = busy || !connected;
+      $("allOffBtn").disabled = busy || !connected;
+      $("testBtn").disabled = busy || !connected;
 
-    label.append(
-      checkbox,
-      document.createTextNode(" " + name)
-    );
+      document.querySelectorAll(".relay button").forEach((button) => {
+        button.disabled = busy || !connected;
+      });
 
-    $("groupChecks").append(label);
-  });
-}
+      document.querySelectorAll(".group-action").forEach((button) => {
+        button.disabled = busy || !connected;
+      });
+    }
 
-function renderGroups() {
-  const host = $("groupList");
-  host.innerHTML = "";
+    function updateConnectionUI() {
+      const status = $("connectionStatus");
 
-  if (groups.length === 0) {
-    host.textContent = "尚未建立組合";
-    return;
-  }
+      if (connected) {
+        status.textContent = "已連線";
+        status.className = "pill online";
+      } else {
+        status.textContent = "尚未連線";
+        status.className = "pill offline";
+      }
 
-  groups.forEach((group, index) => {
-    const box = document.createElement("div");
-    box.className = "card";
+      $("deviceName").textContent =
+        "目前裝置：" +
+        (bluetoothDevice ? bluetoothDevice.name || "未命名裝置" : "無");
 
-    const title = document.createElement("strong");
-    title.textContent = group.name;
+      updateButtons();
+      renderRelays();
+      renderGroups();
+    }
 
-    const detail = document.createElement("p");
-    detail.textContent =
-      group.relays.map(i => names[i]).join("、");
+    // ==============================
+    // 分頁
+    // ==============================
 
-    const run = document.createElement("button");
-    run.textContent = "執行組合";
-    run.onclick = async () => {
-      if (!characteristic) {
-        writeLog("請先連接藍牙裝置");
+    document.querySelectorAll(".tabs button").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".tabs button").forEach((item) => {
+          item.classList.toggle("active", item === button);
+        });
+
+        ["control", "groups", "settings"].forEach((tab) => {
+          $("tab-" + tab).classList.toggle(
+            "hidden",
+            tab !== button.dataset.tab
+          );
+        });
+      });
+    });
+
+    // ==============================
+    // 繼電器畫面
+    // ==============================
+
+    function renderRelays() {
+      const list = $("relayList");
+      list.replaceChildren();
+
+      for (let i = 0; i < 4; i++) {
+        const row = document.createElement("div");
+        row.className = "relay";
+
+        const info = document.createElement("div");
+        info.className = "relay-info";
+
+        const title = document.createElement("strong");
+        title.textContent = relayNames[i] || DEFAULT_NAMES[i];
+
+        const subtitle = document.createElement("small");
+        subtitle.textContent = "通道 R" + (i + 1);
+
+        info.append(title, subtitle);
+
+        const state = document.createElement("span");
+        state.className =
+          "relay-state" + (relayStates[i] ? " on" : "");
+        state.textContent = relayStates[i] ? "開啟" : "關閉";
+
+        const button = document.createElement("button");
+        button.textContent = relayStates[i] ? "關閉" : "開啟";
+        button.className = relayStates[i] ? "danger" : "";
+        button.disabled = busy || !connected;
+
+        button.addEventListener("click", () => {
+          setRelay(i + 1, !relayStates[i]);
+        });
+
+        row.append(info, state, button);
+        list.appendChild(row);
+      }
+    }
+
+    // ==============================
+    // BLE 連線
+    // ==============================
+
+    function validUUID(value) {
+      return typeof value === "string" && value.trim().length > 0;
+    }
+
+    async function connectBLE() {
+      if (!navigator.bluetooth) {
+        logMessage("此瀏覽器不支援 Web Bluetooth。");
+        alert("目前瀏覽器不支援 Web Bluetooth，請使用支援的 Android 瀏覽器並透過 HTTPS 開啟。");
         return;
       }
 
-      for (const i of group.relays) {
-        await setRelay(i, true);
-        await delay(150);
+      if (connected) {
+        logMessage("裝置已連線。");
+        return;
       }
-    };
 
-    const remove = document.createElement("button");
-    remove.textContent = "刪除";
-    remove.className = "danger";
-    remove.style.marginLeft = "8px";
+      if (!validUUID(bleSettings.serviceUuid) ||
+          !validUUID(bleSettings.characteristicUuid)) {
+        alert("請先設定有效的 Service UUID 與 Characteristic UUID。");
+        return;
+      }
 
-    remove.onclick = () => {
-      groups.splice(index, 1);
-      save(KEY_GROUPS, groups);
+      setBusy(true);
+
+      try {
+        logMessage("正在搜尋藍牙裝置……");
+
+        bluetoothDevice = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: [bleSettings.serviceUuid]
+        });
+
+        bluetoothDevice.addEventListener(
+          "gattserverdisconnected",
+          onDisconnected
+        );
+
+        logMessage(
+          "選擇裝置：" + (bluetoothDevice.name || "未命名裝置")
+        );
+
+        logMessage("正在建立 GATT 連線……");
+
+        gattServer = await bluetoothDevice.gatt.connect();
+
+        logMessage("GATT 連線成功，正在尋找服務……");
+
+        const service = await gattServer.getPrimaryService(
+          bleSettings.serviceUuid
+        );
+
+        logMessage("已找到 Service。正在尋找 Characteristic……");
+
+        writeCharacteristic = await service.getCharacteristic(
+          bleSettings.characteristicUuid
+        );
+
+        if (!writeCharacteristic.properties.write &&
+            !writeCharacteristic.properties.writeWithoutResponse) {
+          throw new Error("特徵值不支援寫入，無法控制繼電器。");
+        }
+
+        connected = true;
+        logMessage("藍牙連線成功，可以控制四路繼電器。");
+
+        updateConnectionUI();
+      } catch (error) {
+        connected = false;
+        writeCharacteristic = null;
+        gattServer = null;
+
+        logMessage("連線失敗：" + error.message);
+
+        if (bluetoothDevice && bluetoothDevice.gatt &&
+            bluetoothDevice.gatt.connected) {
+          bluetoothDevice.gatt.disconnect();
+        }
+
+        updateConnectionUI();
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function onDisconnected() {
+      connected = false;
+      writeCharacteristic = null;
+      gattServer = null;
+
+      logMessage("藍牙連線已中斷。");
+      updateConnectionUI();
+    }
+
+    async function disconnectBLE() {
+      if (bluetoothDevice && bluetoothDevice.gatt &&
+          bluetoothDevice.gatt.connected) {
+        bluetoothDevice.gatt.disconnect();
+      }
+
+      connected = false;
+      writeCharacteristic = null;
+      gattServer = null;
+
+      logMessage("已要求中斷藍牙連線。");
+      updateConnectionUI();
+    }
+
+    // ==============================
+    // 寫入 BLE 指令
+    // ==============================
+
+    async function writeCommand(command) {
+      if (!connected || !writeCharacteristic) {
+        throw new Error("尚未連接 ESP32-S3。");
+      }
+
+      const bytes = new TextEncoder().encode(command);
+
+      if (writeCharacteristic.properties.write) {
+        await writeCharacteristic.writeValueWithResponse(bytes);
+      } else if (writeCharacteristic.properties.writeWithoutResponse) {
+        await writeCharacteristic.writeValueWithoutResponse(bytes);
+      } else {
+        throw new Error("此特徵值不支援寫入。");
+      }
+
+      logMessage("已送出指令：" + command);
+    }
+
+    async function setRelay(channel, on) {
+      if (busy) return;
+
+      if (!connected) {
+        alert("請先連接 ESP32-S3。");
+        return;
+      }
+
+      setBusy(true);
+
+      try {
+        const command = "R" + channel + ":" + (on ? "1" : "0");
+        await writeCommand(command);
+
+        // 這是依照寫入成功推定的狀態，並非繼電器的實際回授。
+        relayStates[channel - 1] = on;
+        renderRelays();
+      } catch (error) {
+        logMessage("繼電器控制失敗：" + error.message);
+        alert("指令傳送失敗：" + error.message);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function allRelays(on) {
+      if (busy) return;
+
+      if (!connected) {
+        alert("請先連接 ESP32-S3。");
+        return;
+      }
+
+      const confirmed = confirm(
+        on ? "確定要開啟全部四路繼電器？" :
+             "確定要關閉全部四路繼電器？"
+      );
+
+      if (!confirmed) return;
+
+      setBusy(true);
+
+      try {
+        for (let channel = 1; channel <= 4; channel++) {
+          const command = "R" + channel + ":" + (on ? "1" : "0");
+
+          await writeCommand(command);
+          relayStates[channel - 1] = on;
+
+          renderRelays();
+
+          if (channel < 4) {
+            await new Promise((resolve) => setTimeout(resolve, 150));
+          }
+        }
+
+        logMessage(on ? "全部開啟指令已送出。" : "全部關閉指令已送出。");
+      } catch (error) {
+        logMessage("批次控制中斷：" + error.message);
+        alert("批次控制中斷：" + error.message);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    $("connectBtn").addEventListener("click", connectBLE);
+    $("disconnectBtn").addEventListener("click", disconnectBLE);
+    $("allOnBtn").addEventListener("click", () => allRelays(true));
+    $("allOffBtn").addEventListener("click", () => allRelays(false));
+
+    // ==============================
+    // 繼電器名稱設定
+    // ==============================
+
+    function renderNameFields() {
+      const container = $("relayNameFields");
+      container.replaceChildren();
+
+      for (let i = 0; i < 4; i++) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "field";
+
+        const label = document.createElement("label");
+        label.htmlFor = "relayName" + (i + 1);
+        label.textContent = "R" + (i + 1) + " 名稱";
+
+        const input = document.createElement("input");
+        input.id = "relayName" + (i + 1);
+        input.maxLength = 40;
+        input.value = relayNames[i] || DEFAULT_NAMES[i];
+        input.placeholder = DEFAULT_NAMES[i];
+
+        wrapper.append(label, input);
+        container.appendChild(wrapper);
+      }
+    }
+
+    $("saveNamesBtn").addEventListener("click", () => {
+      const nextNames = [];
+
+      for (let i = 1; i <= 4; i++) {
+        const value = $("relayName" + i).value.trim();
+        nextNames.push(value || DEFAULT_NAMES[i - 1]);
+      }
+
+      if (!saveJSON(KEYS.names, nextNames)) return;
+
+      relayNames = nextNames;
+      renderRelays();
+      renderNameFields();
       renderGroups();
-      writeLog("已刪除控制組合");
-    };
 
-    box.append(title, detail, run, remove);
-    host.append(box);
-  });
-}
+      logMessage("繼電器名稱已儲存。");
+      alert("繼電器名稱已儲存。");
+    });
 
-/* 設定與名稱 */
-function renderNameInputs() {
-  $("nameInputs").innerHTML = "";
+    // ==============================
+    // 控制組合
+    // ==============================
 
-  names.forEach((name, index) => {
-    const field = document.createElement("div");
-    field.className = "field";
+    function renderGroupChecks(selected = []) {
+      const container = $("groupChecks");
+      container.replaceChildren();
 
-    const label = document.createElement("label");
-    label.textContent = "第 " + (index + 1) + " 路名稱";
+      for (let i = 0; i < 4; i++) {
+        const wrapper = document.createElement("div");
+        wrapper.style.marginBottom = "10px";
 
-    const input = document.createElement("input");
-    input.id = "name" + index;
-    input.value = name;
-    input.maxLength = 24;
+        const label = document.createElement("label");
+        label.style.display = "flex";
+        label.style.alignItems = "center";
+        label.style.gap = "9px";
+        label.style.fontSize = "14px";
 
-    field.append(label, input);
-    $("nameInputs").append(field);
-  });
-}
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = String(i + 1);
+        checkbox.className = "group-check";
+        checkbox.checked = selected.includes(i + 1);
 
-$("connect").onclick = connectBLE;
-$("allOn").onclick = () => allRelays(true);
-$("allOff").onclick = () => allRelays(false);
+        const name = document.createElement("span");
+        name.textContent = "R" + (i + 1) + " · " +
+          (relayNames[i] || DEFAULT_NAMES[i]);
 
-document.querySelectorAll("[data-tab]").forEach(button => {
-  button.onclick = () => {
-    document.querySelectorAll("[data-tab]").forEach(item =>
-      item.classList.toggle("active", item === button)
-    );
+        label.append(checkbox, name);
+        wrapper.appendChild(label);
+        container.appendChild(wrapper);
+      }
+    }
 
-    document.querySelectorAll(".page").forEach(page =>
-      page.classList.toggle(
-        "active",
-        page.id === button.dataset.tab
-      )
-    );
-  };
-});
+    function renderGroups() {
+      const container = $("groupList");
+      container.replaceChildren();
 
-$("deviceName").value = settings.deviceName;
-$("serviceUuid").value = settings.serviceUuid;
-$("charUuid").value = settings.charUuid;
+      if (!groups.length) {
+        const empty = document.createElement("p");
+        empty.className = "hint";
+        empty.textContent = "目前沒有已儲存的控制組合。";
+        container.appendChild(empty);
+        return;
+      }
 
-$("saveSettings").onclick = () => {
-  settings = {
-    deviceName: $("deviceName").value.trim() || "ESP32-S3-Car",
-    serviceUuid: $("serviceUuid").value.trim() || DEFAULT_SERVICE,
-    charUuid: $("charUuid").value.trim() || DEFAULT_CHAR
-  };
+      groups.forEach((group, index) => {
+        const item = document.createElement("div");
+        item.className = "group-item";
 
-  save(KEY_SETTINGS, settings);
-  writeLog("藍牙設定已儲存");
-};
+        const title = document.createElement("strong");
+        title.textContent = group.name;
 
-$("saveNames").onclick = () => {
-  names = names.map((_, index) =>
-    $("name" + index).value.trim() || "繼電器 " + (index + 1)
-  );
+        const description = document.createElement("p");
+        description.textContent = (group.channels || [])
+          .map((channel) => {
+            return "R" + channel + " · " +
+              (relayNames[channel - 1] || DEFAULT_NAMES[channel - 1]);
+          })
+          .join("、");
 
-  save(KEY_NAMES, names);
-  renderRelays();
-  renderNameInputs();
-  renderGroupChecks();
-  renderGroups();
-  writeLog("繼電器名稱已儲存");
-};
+        const actions = document.createElement("div");
+        actions.className = "button-row";
 
-$("saveGroup").onclick = () => {
-  const name = $("groupName").value.trim();
-  const relays = [0, 1, 2, 3].filter(
-    i => $("groupCheck" + i).checked
-  );
+        const onButton = document.createElement("button");
+        onButton.className = "group-action";
+        onButton.textContent = "開啟組合";
+        onButton.addEventListener("click", () => {
+          runGroup(index, true);
+        });
 
-  if (!name || relays.length === 0) {
-    writeLog("請輸入組合名稱並至少選擇一路繼電器");
-    return;
-  }
+        const offButton = document.createElement("button");
+        offButton.className = "group-action";
+        offButton.textContent = "關閉組合";
+        offButton.addEventListener("click", () => {
+          runGroup(index, false);
+        });
 
-  groups.push({ name, relays });
-  save(KEY_GROUPS, groups);
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "刪除";
+        deleteButton.className = "danger";
+        deleteButton.addEventListener("click", () => {
+          deleteGroup(index);
+        });
 
-  $("groupName").value = "";
-  [0, 1, 2, 3].forEach(
-    i => $("groupCheck" + i).checked = false
-  );
+        actions.append(onButton, offButton, deleteButton);
+        item.append(title, description, actions);
+        container.appendChild(item);
+      });
 
-  renderGroups();
-  writeLog("已儲存組合：" + name);
-};
+      updateButtons();
+    }
 
-$("disconnect").onclick = () => {
-  if (device && device.gatt && device.gatt.connected) {
-    device.gatt.disconnect();
-  } else {
-    characteristic = null;
-    setStatus("尚未連線");
-    writeLog("目前沒有藍牙連線");
-  }
-};
+    $("saveGroupBtn").addEventListener("click", () => {
+      const name = $("groupName").value.trim();
 
-$("clearLog").onclick = () => {
-  $("log").textContent = "紀錄已清除";
-};
+      const channels = Array.from(
+        document.querySelectorAll(".group-check:checked")
+      ).map((checkbox) => Number(checkbox.value));
 
-renderRelays();
-renderGroupChecks();
-renderNameInputs();
-renderGroups();
-</script>
+      if (!name) {
+        alert("請輸入組合名稱。");
+        return;
+      }
+
+      if (!channels.length) {
+        alert("請至少選擇一路繼電器。");
+        return;
+      }
+
+      const nextGroups = groups.concat([{ name, channels }]);
+
+      if (!saveJSON(KEYS.groups, nextGroups)) return;
+
+      groups = nextGroups;
+      $("groupName").value = "";
+      renderGroupChecks();
+      renderGroups();
+
+      logMessage("已新增控制組合：" + name);
+      alert("控制組合已儲存。");
+    });
+
+    async function runGroup(index, on) {
+      if (busy) return;
+
+      const group = groups[index];
+      if (!group) return;
+
+      if (!connected) {
+        alert("請先連接 ESP32-S3。");
+        return;
+      }
+
+      const channels = (group.channels || [])
+        .filter((channel) => Number.isInteger(channel) &&
+          channel >= 1 && channel <= 4);
+
+      if (!channels.length) {
+        alert("此組合沒有有效的繼電器通道。");
+        return;
+      }
+
+      if (!confirm(
+        "確定要" + (on ? "開啟" : "關閉") + "組合「" + group.name + "」？"
+      )) {
+        return;
+      }
+
+      setBusy(true);
+
+      try {
+        for (let i = 0; i < channels.length; i++) {
+          const channel = channels[i];
+          await writeCommand("R" + channel + ":" + (on ? "1" : "0"));
+
+          relayStates[channel - 1] = on;
+          renderRelays();
+
+          if (i < channels.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 150));
+          }
+        }
+
+        logMessage("組合「" + group.name + "」控制完成。");
+      } catch (error) {
+        logMessage("組合控制失敗：" + error.message);
+        alert("組合控制失敗：" + error.message);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function deleteGroup(index) {
+      if (!confirm("確定刪除此控制組合？")) return;
+
+      const nextGroups = groups.filter((_, i) => i !== index);
+
+      if (!saveJSON(KEYS.groups, nextGroups)) return;
+
+      groups = nextGroups;
+      renderGroups();
+      logMessage("已刪除控制組合。");
+    }
+
+    // ==============================
+    // BLE UUID 設定
+    // ==============================
+
+    function renderBleSettings() {
+      $("serviceUuid").value = bleSettings.serviceUuid;
+      $("characteristicUuid").value = bleSettings.characteristicUuid;
+    }
+
+    $("saveBleBtn").addEventListener("click", () => {
+      const serviceUuid = $("serviceUuid").value.trim();
+      const characteristicUuid =
+        $("characteristicUuid").value.trim();
+
+      if (!validUUID(serviceUuid) || !validUUID(characteristicUuid)) {
+        alert("Service UUID 與 Characteristic UUID 不可空白。");
+        return;
+      }
+
+      const nextSettings = {
+        serviceUuid,
+        characteristicUuid
+      };
+
+      if (!saveJSON(KEYS.ble, nextSettings)) return;
+
+      bleSettings = nextSettings;
+
+      logMessage("藍牙 UUID 設定已儲存。");
+      alert("設定已儲存。若已連線，請先中斷後重新連線。");
+    });
+
+    // ==============================
+    // 診斷工具
+    // ==============================
+
+    $("testBtn").addEventListener("click", async () => {
+      if (!connected || !writeCharacteristic) {
+        alert("目前沒有藍牙連線。");
+        return;
+      }
+
+      logMessage("測試結果：BLE 已連線。");
+      logMessage(
+        "Characteristic 支援寫入：" +
+        (
+          writeCharacteristic.properties.write ||
+          writeCharacteristic.properties.writeWithoutResponse
+        )
+      );
+      logMessage("目前使用的 Service UUID：" + bleSettings.serviceUuid);
+      logMessage(
+        "目前使用的 Characteristic UUID：" +
+        bleSettings.characteristicUuid
+      );
+      logMessage("注意：此測試不會切換任何繼電器。");
+    });
+
+    $("clearLogBtn").addEventListener("click", () => {
+      $("log").textContent = "紀錄已清除。";
+    });
+
+    // ==============================
+    // PWA 安裝
+    // ==============================
+
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      installPrompt = event;
+      $("installBtn").classList.remove("hidden");
+    });
+
+    $("installBtn").addEventListener("click", async () => {
+      if (!installPrompt) {
+        alert("目前沒有可用的安裝提示。請從瀏覽器選單選擇「加到主畫面」。");
+        return;
+      }
+
+      installPrompt.prompt();
+      await installPrompt.userChoice;
+      installPrompt = null;
+      $("installBtn").classList.add("hidden");
+    });
+
+    window.addEventListener("appinstalled", () => {
+      logMessage("Ec電驅已安裝。");
+      $("installBtn").classList.add("hidden");
+    });
+
+    // ==============================
+    // 啟動初始化
+    // ==============================
+
+    function init() {
+      if (!Array.isArray(relayNames) || relayNames.length !== 4) {
+        relayNames = DEFAULT_NAMES.slice();
+      }
+
+      if (!Array.isArray(groups)) {
+        groups = [];
+      }
+
+      if (!bleSettings ||
+          typeof bleSettings.serviceUuid !== "string" ||
+          typeof bleSettings.characteristicUuid !== "string") {
+        bleSettings = {
+          serviceUuid: DEFAULT_SERVICE_UUID,
+          characteristicUuid: DEFAULT_CHARACTERISTIC_UUID
+        };
+      }
+
+      renderRelays();
+      renderNameFields();
+      renderBleSettings();
+      renderGroupChecks();
+      renderGroups();
+      updateConnectionUI();
+
+      if (!window.isSecureContext) {
+        logMessage("提醒：目前不是安全環境，Web Bluetooth 可能無法使用。");
+      }
+
+      if (!navigator.bluetooth) {
+        logMessage("此瀏覽器未提供 Web Bluetooth API。");
+      }
+    }
+
+    init();
+
+    if ("serviceWorker" in navigator &&
+        location.protocol !== "file:") {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js")
+          .then(() => {
+            console.log("Service Worker 已註冊");
+          })
+          .catch((error) => {
+            console.error("Service Worker 註冊失敗：", error);
+          });
+      });
+    }
+  </script>
 </body>
 </html>
