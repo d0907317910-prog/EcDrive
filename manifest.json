@@ -1,0 +1,11 @@
+{
+  "name": "Ec電驅",
+  "short_name": "Ec電驅",
+  "description": "ESP32-S3 四路控制與 ANT BMS 監控",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#ffffff",
+  "icons": []
+}
